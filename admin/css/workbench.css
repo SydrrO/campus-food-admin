@@ -12,6 +12,7 @@
   --red: #b6422f;
   --blue: #2f5f9f;
   --shadow: 0 18px 48px rgba(41, 31, 16, 0.1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * {
@@ -154,21 +155,26 @@ select {
 .top-brand-title {
   display: inline-flex;
   align-items: baseline;
-  gap: 7px;
+  gap: 8px;
   line-height: 1.05;
   white-space: nowrap;
 }
 
 .brand-name {
-  color: #8b6428;
-  font-size: 25px;
+  display: inline-block;
+  color: transparent;
+  background:
+    linear-gradient(112deg, #6d4918 0%, #b88a49 25%, #08aaa4 46%, #086970 58%, #c49b56 78%, #09b9b2 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  font-size: 31px;
   font-weight: 950;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.78);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.72)) drop-shadow(0 8px 16px rgba(5, 120, 120, 0.1));
 }
 
 .brand-version {
-  color: #6d562e;
-  font-size: 13px;
+  color: #7a6230;
+  font-size: 12px;
   font-weight: 850;
 }
 
@@ -262,6 +268,8 @@ select {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 22px 60px rgba(3, 52, 56, 0.18);
   backdrop-filter: blur(16px);
+  animation: soft-pop 180ms var(--ease);
+  transform-origin: top right;
 }
 
 .app-menu-item {
@@ -277,12 +285,17 @@ select {
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms var(--ease);
 }
 
 .app-menu-item:hover,
 .app-menu-item.active {
   background: linear-gradient(135deg, #efffff, #d8f8f6);
   color: #05363a;
+}
+
+.app-menu-item:hover {
+  transform: translateX(-1px);
 }
 
 .app-menu-item-title {
@@ -333,6 +346,21 @@ select {
   border-radius: 8px;
   font-weight: 850;
   cursor: pointer;
+  transform: translateY(0);
+  transition:
+    transform 150ms var(--ease),
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
 }
 
 .button.secondary {
@@ -673,6 +701,16 @@ select {
     linear-gradient(90deg, rgba(10, 186, 181, 0.2), rgba(10, 186, 181, 0) 4px),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(234, 255, 252, 0.72));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 14px 36px rgba(4, 70, 73, 0.08);
+  transition:
+    transform 180ms var(--ease),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.user-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(10, 186, 181, 0.48);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 18px 42px rgba(4, 70, 73, 0.12);
 }
 
 .user-card-avatar {
@@ -1641,6 +1679,11 @@ body {
 
 .order-row {
   border-bottom-color: rgba(118, 207, 203, 0.2);
+  transition: background-color 160ms ease, transform 160ms var(--ease);
+}
+
+.order-row:hover {
+  background: rgba(237, 255, 253, 0.62);
 }
 
 .category-button,
@@ -1671,6 +1714,11 @@ body {
 .modal-backdrop {
   background: rgba(4, 38, 41, 0.42);
   backdrop-filter: blur(8px);
+  animation: fade-in 160ms ease;
+}
+
+.modal {
+  animation: modal-rise 190ms var(--ease);
 }
 
 .modal-head,
@@ -1692,6 +1740,63 @@ body {
 
 .user-field {
   color: var(--muted);
+}
+
+.main > section {
+  animation: view-soft-in 180ms var(--ease);
+}
+
+@keyframes soft-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes view-soft-in {
+  from {
+    opacity: 0.72;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 .refund-message {
@@ -1760,16 +1865,16 @@ body {
   }
 
   .top-brand-title {
-    gap: 6px;
+    gap: 7px;
     white-space: nowrap;
   }
 
   .brand-name {
-    font-size: 22px;
+    font-size: 27px;
   }
 
   .brand-version {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .top-brand-subtitle {
@@ -2379,15 +2484,15 @@ body {
   }
 
   .top-brand-title {
-    gap: 5px;
+    gap: 6px;
   }
 
   .brand-name {
-    font-size: 21px;
+    font-size: 25px;
   }
 
   .brand-version {
-    font-size: 11px;
+    font-size: 10.5px;
   }
 
   .top-brand-subtitle {
