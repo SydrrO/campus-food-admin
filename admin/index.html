@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜商家后台 v1.9</title>
+  <title>赛杜商家后台 v2.0</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0190">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0200">
 </head>
 <body>
   <div id="app" class="admin-shell">
@@ -13,7 +13,7 @@
       <header class="topbar">
         <div class="topbar-copy">
           <div class="top-brand">
-            <div class="top-brand-title">赛杜后台 v1.9</div>
+            <div class="top-brand-title"><span class="brand-name">赛杜后台</span><span class="brand-version">v2.0</span></div>
             <div class="top-brand-subtitle">商家后台</div>
           </div>
           <div>
@@ -98,36 +98,29 @@
             </div>
           </div>
 
-          <div class="table-wrap" v-if="visibleUsers.length">
-            <table class="data-table user-table">
-              <thead>
-                <tr>
-                  <th>头像</th>
-                  <th>用户ID</th>
-                  <th>昵称</th>
-                  <th>累计消费</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="user in visibleUsers" :key="user.id" :class="{ 'zero-spend-row': Number(user.total_spent || 0) <= 0 }">
-                  <td class="avatar-cell">
-                    <div class="avatar" :class="{ member: user.is_member }">
-                      <img v-if="user.avatar_url" :src="user.avatar_url" alt="">
-                      <span v-else>{{ avatarText(user) }}</span>
-                    </div>
-                  </td>
-                  <td class="mono strong user-id-cell"><span class="user-ledger-value">{{ formatUserId(user.id) }}</span></td>
-                  <td class="user-name-cell">
-                    <span class="user-name-display" :title="user.nickname || '未填写昵称'">{{ compactUserName(user) }}</span>
-                  </td>
-                  <td class="strong user-spend-cell"><span class="user-money-value">{{ money(user.total_spent) }}</span></td>
-                  <td class="user-action-cell">
-                    <button class="button small secondary" type="button" @click="openUserDetail(user)">更多</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="user-card-list" v-if="visibleUsers.length">
+            <article class="user-card" v-for="user in visibleUsers" :key="user.id" :class="{ 'zero-spend-row': Number(user.total_spent || 0) <= 0 }">
+              <div class="user-card-avatar">
+                <div class="avatar" :class="{ member: user.is_member }">
+                  <img v-if="user.avatar_url" :src="user.avatar_url" alt="">
+                  <span v-else>{{ avatarText(user) }}</span>
+                </div>
+              </div>
+              <div class="user-card-main">
+                <div class="user-card-name" :title="user.nickname || '未填写昵称'">{{ compactUserName(user) }}</div>
+                <div class="user-card-metrics">
+                  <div class="user-metric">
+                    <span class="user-metric-label">ID</span>
+                    <strong class="mono">{{ formatUserId(user.id) }}</strong>
+                  </div>
+                  <div class="user-metric spend">
+                    <span class="user-metric-label">消费</span>
+                    <strong>{{ money(user.total_spent) }}</strong>
+                  </div>
+                </div>
+              </div>
+              <button class="button small secondary user-card-more" type="button" @click="openUserDetail(user)">更多</button>
+            </article>
           </div>
           <div v-else class="empty">{{ userKeyword ? '没有匹配用户。' : (users.length ? '0 消费用户已折叠，点击上方按钮可展开。' : '当前没有用户数据。') }}</div>
         </div>
@@ -460,9 +453,6 @@
 
           <div class="panel-note" v-if="deliverySummaryNote">{{ deliverySummaryNote }}</div>
         </div>
-        <div class="modal-foot">
-          <button class="button secondary" type="button" @click="closeDeliverySummary">关闭</button>
-        </div>
       </article>
     </div>
 
@@ -590,6 +580,6 @@
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0190"></script>
+  <script src="js/workbench.js?v=20260501-0200"></script>
 </body>
 </html>
