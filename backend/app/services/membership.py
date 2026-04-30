@@ -28,6 +28,10 @@ def _points_for_amount(value) -> int:
     return int((amount * POINTS_PER_YUAN).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
+def _amount(value) -> Decimal:
+    return Decimal(str(value or "0.00")).quantize(Decimal("0.01"))
+
+
 def get_paid_spend(db: Session, user_id: int) -> Decimal:
     user = db.query(User).filter(User.id == user_id).first()
     if user and user.total_spent is not None:
@@ -49,10 +53,29 @@ def record_order_spend(db: Session, order: Order) -> None:
     if not user:
         return
 
-    order_amount = Decimal(str(order.actual_amount or "0.00"))
+    order_amount = _amount(order.actual_amount)
     user.total_spent = Decimal(str(user.total_spent or "0.00")) + order_amount
     user.points = int(user.points or 0) + _points_for_amount(order_amount)
     order.spend_counted_at = order.paid_at
+    db.add(user)
+    db.add(order)
+
+
+def reverse_order_spend(db: Session, order: Order) -> None:
+    if order.spend_counted_at is None:
+        return
+
+    user = db.query(User).filter(User.id == order.user_id).with_for_update().first()
+    if not user:
+        return
+
+    order_amount = _amount(order.actual_amount)
+    user.total_spent = max(
+        Decimal(str(user.total_spent or "0.00")) - order_amount,
+        Decimal("0.00"),
+    ).quantize(Decimal("0.01"))
+    user.points = max(int(user.points or 0) - _points_for_amount(order_amount), 0)
+    order.spend_counted_at = None
     db.add(user)
     db.add(order)
 
@@ -69,7 +92,6 @@ def recalculate_user_total_spent(db: Session, user_id: int) -> None:
     )
     order_amounts = [Decimal(str(order.actual_amount or "0.00")) for order in paid_orders]
     user.total_spent = sum(order_amounts, Decimal("0.00")).quantize(Decimal("0.01"))
-    user.points = sum((_points_for_amount(amount) for amount in order_amounts), 0)
     db.add(user)
 
 

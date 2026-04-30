@@ -21,7 +21,7 @@ from app.schemas.admin_order import (
 )
 from app.schemas.order import OrderItemOut
 from app.schemas.response import ResponseModel
-from app.services.membership import recalculate_user_total_spent
+from app.services.membership import recalculate_user_total_spent, reverse_order_spend
 from app.services.refund_trace import apply_wechat_trade_trace
 from app.services.wechat_pay import (
     WechatPayConfigError,
@@ -615,6 +615,7 @@ async def manual_refund_order(
         admin_name = getattr(current_admin, "username", None) or str(getattr(current_admin, "id", "admin"))
         order.wechat_trade_state = "MANUAL_REFUND"
         order.wechat_trade_state_desc = f"Manual refund by admin {admin_name}"
+        reverse_order_spend(db, order)
         recalculate_user_total_spent(db, int(order.user_id))
         db.add(order)
         db.commit()
