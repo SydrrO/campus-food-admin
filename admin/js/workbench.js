@@ -173,7 +173,10 @@ createApp({
       return String(Math.trunc(id)).padStart(4, "0");
     };
 
-    const avatarText = (user) => shortText(user.nickname || user.public_uid || user.id || "U", 1).toUpperCase();
+    const avatarText = (user) => {
+      const text = String(user?.nickname || user?.public_uid || user?.id || "U").trim() || "U";
+      return (Array.from(text)[0] || "U").toUpperCase();
+    };
     const compactUserName = (user) => middleText(user?.nickname || "未填写昵称", 10);
 
     const sortedUsers = computed(() => [...users.value].sort((a, b) => {
