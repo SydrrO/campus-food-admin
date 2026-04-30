@@ -466,8 +466,7 @@ createApp({
       missing_cost_items: 0,
     };
     const financeSummary = computed(() => financeReport.value?.summary || emptyFinanceSummary);
-    const financeDailyRows = computed(() => financeReport.value?.daily_rows || []);
-    const financeDishRows = computed(() => financeReport.value?.dish_rows || []);
+    const financeDishRows = computed(() => (financeReport.value?.dish_rows || []).slice(0, 5));
 
     const setTab = async (tab) => {
       activeTab.value = tab;
@@ -1052,7 +1051,6 @@ createApp({
       financeDays,
       financeReport,
       financeSummary,
-      financeDailyRows,
       financeDishRows,
       categoryEditor,
       dishEditor,

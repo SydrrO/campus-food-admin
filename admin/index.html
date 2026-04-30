@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜甄选-后台 v2.5</title>
+  <title>赛杜甄选-后台 v2.8</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0250">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0280">
 </head>
 <body>
   <div id="app" class="admin-shell">
@@ -13,7 +13,7 @@
       <header class="topbar">
         <div class="topbar-copy">
           <div class="top-brand">
-            <div class="top-brand-title"><span class="brand-name">赛杜甄选-后台</span><span class="brand-version">v2.5</span></div>
+            <div class="top-brand-title"><span class="brand-name">赛杜甄选-后台</span><span class="brand-version">v2.8</span></div>
             <div class="top-brand-subtitle">商家后台</div>
           </div>
           <div>
@@ -283,8 +283,8 @@
             <label class="field">
               <span class="field-label">统计范围</span>
               <select class="select" v-model.number="financeDays" @change="loadFinance">
+                <option :value="1">最近1天</option>
                 <option :value="7">最近7天</option>
-                <option :value="14">最近14天</option>
                 <option :value="30">最近30天</option>
               </select>
             </label>
@@ -304,35 +304,8 @@
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h2 class="panel-title">每日流水</h2>
-                <div class="panel-note">按配送日期汇总，已关闭和已退款订单不计入。</div>
-              </div>
-            </div>
-            <div class="finance-list" v-if="financeDailyRows.length">
-              <div class="finance-row finance-row-head">
-                <span>日期</span>
-                <span>流水</span>
-                <span>成本</span>
-                <span>利润</span>
-              </div>
-              <div class="finance-row" v-for="row in financeDailyRows" :key="row.date">
-                <span>
-                  <strong>{{ row.date }}</strong>
-                  <em>{{ row.order_count }}单 / {{ row.item_count }}份</em>
-                </span>
-                <span>{{ money(row.revenue_amount) }}</span>
-                <span>{{ money(row.cost_amount) }}</span>
-                <span :class="{ negative: Number(row.profit_amount || 0) < 0 }">{{ money(row.profit_amount) }}</span>
-              </div>
-            </div>
-            <div v-else class="empty">{{ financeLoading ? '正在计算对账...' : '暂无对账数据。' }}</div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
                 <h2 class="panel-title">商品利润榜</h2>
-                <div class="panel-note">按利润排序，成本为空的菜品会标记出来。</div>
+                <div class="panel-note">只展示利润最高的前 5 个商品，成本为空的菜品会标记出来。</div>
               </div>
             </div>
             <div class="finance-dish-list" v-if="financeDishRows.length">
@@ -717,7 +690,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vant@3/lib/vant.min.js"></script>
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
-  <script src="js/api.js?v=20260501-0250"></script>
-  <script src="js/workbench.js?v=20260501-0250"></script>
+  <script src="js/api.js?v=20260501-0280"></script>
+  <script src="js/workbench.js?v=20260501-0280"></script>
 </body>
 </html>

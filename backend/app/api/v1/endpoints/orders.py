@@ -24,6 +24,8 @@ from app.utils.timezone import now_china
 
 router = APIRouter()
 
+SPECIAL_COUPON_ACCOUNTED_USER_IDS = {1}
+
 
 def _get_config_map(db: Session) -> dict[str, str]:
     configs = db.query(SystemConfig).all()
@@ -256,7 +258,12 @@ async def create_order(
     requested_discount_amount = member_discount_amount + coupon_discount_amount
     discount_amount = min(requested_discount_amount, payable_amount).quantize(Decimal("0.01"))
     actual_amount = (payable_amount - discount_amount).quantize(Decimal("0.01"))
+    is_special_coupon_accounted_order = int(current_user.id) in SPECIAL_COUPON_ACCOUNTED_USER_IDS and selected_coupon is not None
+    if is_special_coupon_accounted_order:
+        discount_amount = Decimal("0.00")
+        actual_amount = payable_amount
     is_zero_pay_order = actual_amount <= Decimal("0.00")
+    is_direct_confirm_order = is_zero_pay_order or is_special_coupon_accounted_order
     order_no = generate_order_no()
     created_at = now_china()
     order = Order(
@@ -272,17 +279,17 @@ async def create_order(
         delivery_fee=delivery_fee,
         discount_amount=discount_amount,
         actual_amount=actual_amount,
-        status=OrderStatus.confirmed if is_zero_pay_order else OrderStatus.unpaid,
+        status=OrderStatus.confirmed if is_direct_confirm_order else OrderStatus.unpaid,
         remark=payload.remark,
         coupon_id=int(selected_coupon.id) if selected_coupon else None,
-        pay_method=("coupon" if selected_coupon else "discount") if is_zero_pay_order else None,
-        paid_at=created_at if is_zero_pay_order else None,
+        pay_method="coupon_accounted" if is_special_coupon_accounted_order else (("coupon" if selected_coupon else "discount") if is_zero_pay_order else None),
+        paid_at=created_at if is_direct_confirm_order else None,
         created_at=created_at,
     )
     db.add(order)
     db.flush()
 
-    if selected_coupon and is_zero_pay_order:
+    if selected_coupon and is_direct_confirm_order:
         selected_coupon.status = "used"
         selected_coupon.used_at = created_at
         selected_coupon.locked_order_id = order.id
@@ -296,7 +303,7 @@ async def create_order(
         order_item.order_id = order.id
         db.add(order_item)
 
-    if is_zero_pay_order:
+    if is_direct_confirm_order:
         record_order_spend(db, order)
 
     db.commit()
