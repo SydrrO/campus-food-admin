@@ -109,6 +109,7 @@ async def create_dish(
         detail_content=payload.detail_content,
         image_url=payload.image_url,
         price=payload.price,
+        cost_price=payload.cost_price,
         stock=payload.stock,
         sort_order=payload.sort_order,
         is_active=payload.is_active,
@@ -141,6 +142,7 @@ async def update_dish(
     dish.detail_content = payload.detail_content
     dish.image_url = payload.image_url
     dish.price = payload.price
+    dish.cost_price = payload.cost_price
     dish.stock = payload.stock
     dish.sort_order = payload.sort_order
     dish.is_active = payload.is_active

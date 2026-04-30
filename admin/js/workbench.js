@@ -53,7 +53,7 @@ createApp({
   setup() {
     const readInitialTab = () => {
       const tab = (window.location.hash || "").replace("#", "");
-      return ["users", "orders", "menu"].includes(tab) ? tab : "orders";
+      return ["users", "orders", "menu", "ledger"].includes(tab) ? tab : "orders";
     };
 
     const activeTab = ref(readInitialTab());
@@ -90,6 +90,9 @@ createApp({
     const dishes = ref([]);
     const menuSearch = ref("");
     const selectedCategoryId = ref("all");
+    const financeLoading = ref(false);
+    const financeDays = ref(7);
+    const financeReport = ref(null);
     const categoryEditor = ref({ open: false, mode: "create", id: null, name: "", sort_order: 0, is_active: true });
     const dishEditor = ref({
       open: false,
@@ -101,6 +104,7 @@ createApp({
       detail_content: "",
       image_url: "",
       price: "",
+      cost_price: "",
       stock: -1,
       sort_order: 0,
       is_active: true,
@@ -445,6 +449,26 @@ createApp({
       soldOut: dishes.value.filter((dish) => dish.is_sold_out).length,
     }));
 
+    const emptyFinanceSummary = {
+      start_date: "",
+      end_date: "",
+      order_count: 0,
+      item_count: 0,
+      gross_amount: "0.00",
+      product_amount: "0.00",
+      delivery_fee: "0.00",
+      discount_amount: "0.00",
+      revenue_amount: "0.00",
+      cost_amount: "0.00",
+      profit_amount: "0.00",
+      profit_rate: "0.00",
+      average_order_amount: "0.00",
+      missing_cost_items: 0,
+    };
+    const financeSummary = computed(() => financeReport.value?.summary || emptyFinanceSummary);
+    const financeDailyRows = computed(() => financeReport.value?.daily_rows || []);
+    const financeDishRows = computed(() => financeReport.value?.dish_rows || []);
+
     const setTab = async (tab) => {
       activeTab.value = tab;
       if (window.location.hash !== `#${tab}`) {
@@ -453,6 +477,7 @@ createApp({
       if (tab === "users" && !users.value.length) await loadUsers();
       if (tab === "orders" && !orders.value.length) await loadOrders();
       if (tab === "menu" && !dishes.value.length) await loadMenu();
+      if (tab === "ledger" && !financeReport.value) await loadFinance();
     };
 
     const toggleNavMenu = () => {
@@ -740,6 +765,17 @@ createApp({
       }
     };
 
+    const loadFinance = async () => {
+      financeLoading.value = true;
+      try {
+        financeReport.value = await api.getReconciliation({ days: financeDays.value || 7 });
+      } catch (error) {
+        showToast(error.message || "对账数据加载失败");
+      } finally {
+        financeLoading.value = false;
+      }
+    };
+
     const loadMenu = async () => {
       menuLoading.value = true;
       try {
@@ -828,6 +864,7 @@ createApp({
       detail_content: "",
       image_url: "",
       price: "",
+      cost_price: "",
       stock: -1,
       sort_order: dishes.value.length * 10 + 10,
       is_active: true,
@@ -846,6 +883,7 @@ createApp({
             detail_content: dish.detail_content || "",
             image_url: dish.image_url || "",
             price: String(dish.price || ""),
+            cost_price: String(dish.cost_price || ""),
             stock: dish.stock,
             sort_order: dish.sort_order,
             is_active: Boolean(dish.is_active),
@@ -873,6 +911,7 @@ createApp({
         detail_content: form.detail_content.trim(),
         image_url: form.image_url.trim(),
         price: Number(form.price),
+        cost_price: Number(form.cost_price || 0),
         stock: Number(form.stock),
         sort_order: Number(form.sort_order),
         is_active: Boolean(form.is_active),
@@ -884,6 +923,7 @@ createApp({
       if (!payload.name) return "请填写菜品名称";
       if (!payload.category_id) return "请选择分类";
       if (!Number.isFinite(payload.price) || payload.price < 0) return "请填写有效价格";
+      if (!Number.isFinite(payload.cost_price) || payload.cost_price < 0) return "请填写有效成本";
       if (!Number.isFinite(payload.stock)) return "请填写有效库存";
       if (!Number.isFinite(payload.sort_order)) return "请填写有效排序";
       return "";
@@ -918,6 +958,7 @@ createApp({
         detail_content: dish.detail_content || "",
         image_url: dish.image_url || "",
         price: Number(dish.price),
+        cost_price: Number(dish.cost_price || 0),
         stock: Number(dish.stock),
         sort_order: Number(dish.sort_order),
         is_active: Boolean(dish.is_active),
@@ -953,7 +994,9 @@ createApp({
       document.addEventListener("click", handleNativeRefundConfirmClick, true);
       loading.value = true;
       try {
-        await Promise.all([loadMeta(), loadUsers(), loadOrders(), loadMenu()]);
+        const initialLoads = [loadMeta(), loadUsers(), loadOrders(), loadMenu()];
+        if (activeTab.value === "ledger") initialLoads.push(loadFinance());
+        await Promise.all(initialLoads);
       } finally {
         loading.value = false;
       }
@@ -1005,6 +1048,12 @@ createApp({
       dishes,
       menuSearch,
       selectedCategoryId,
+      financeLoading,
+      financeDays,
+      financeReport,
+      financeSummary,
+      financeDailyRows,
+      financeDishRows,
       categoryEditor,
       dishEditor,
       categoryMap,
@@ -1041,6 +1090,7 @@ createApp({
       printFilteredOrders,
       formatFlavors,
       copyText,
+      loadFinance,
       loadMenu,
       categoryName,
       openCategoryEditor,

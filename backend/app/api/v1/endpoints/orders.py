@@ -230,6 +230,7 @@ async def create_order(
             dish.stock -= item.quantity
 
         price = Decimal(str(dish.price))
+        cost_price = Decimal(str(dish.cost_price or "0.00"))
         subtotal = price * item.quantity
         total_amount += subtotal
         order_items.append(
@@ -238,6 +239,7 @@ async def create_order(
                 dish_name=dish.name,
                 dish_image=dish.image_url,
                 price=price,
+                cost_price=cost_price,
                 quantity=item.quantity,
                 flavors=item.flavors,
                 subtotal=subtotal,

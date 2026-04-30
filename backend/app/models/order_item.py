@@ -15,6 +15,7 @@ class OrderItem(Base):
     dish_name = Column(String(100), nullable=False)
     dish_image = Column(String(255))
     price = Column(DECIMAL(10, 2), nullable=False)
+    cost_price = Column(DECIMAL(10, 2), nullable=False, default=0)
     quantity = Column(Integer, nullable=False)
     flavors = Column(JSON)
     subtotal = Column(DECIMAL(10, 2), nullable=False)

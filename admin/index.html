@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜甄选-后台 v2.4</title>
+  <title>赛杜甄选-后台 v2.5</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0240">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0250">
 </head>
 <body>
   <div id="app" class="admin-shell">
@@ -13,7 +13,7 @@
       <header class="topbar">
         <div class="topbar-copy">
           <div class="top-brand">
-            <div class="top-brand-title"><span class="brand-name">赛杜甄选-后台</span><span class="brand-version">v2.4</span></div>
+            <div class="top-brand-title"><span class="brand-name">赛杜甄选-后台</span><span class="brand-version">v2.5</span></div>
             <div class="top-brand-subtitle">商家后台</div>
           </div>
           <div>
@@ -24,9 +24,11 @@
                 {{ deliverySummaryLoading ? '统计中' : '配送详情' }}
               </button>
             </div>
+            <h1 class="page-title" v-if="activeTab === 'ledger'">对账中心</h1>
             <h1 class="page-title" v-if="activeTab === 'menu'">菜单数据</h1>
             <div class="page-note" v-if="activeTab === 'users'">用户列表保留常用字段，更多资料从行尾按钮打开，手机上也能快速扫用户和消费情况。</div>
             <div class="page-note" v-if="activeTab === 'orders'">订单按状态归类展示，列表直接显示“谁点了什么”，详情和列表共用同一套后端数据，状态变更后会自动同步。</div>
+            <div class="page-note" v-if="activeTab === 'ledger'">最近流水、商品成本和毛利集中核对，成本来自菜单维护里的菜品成本。</div>
             <div class="page-note" v-if="activeTab === 'menu'">菜单页只保留真实可用操作：分类新增/编辑/删除，菜品新增/编辑/上下架/售罄/删除。</div>
           </div>
         </div>
@@ -50,6 +52,10 @@
               <button class="app-menu-item" :class="{ active: activeTab === 'menu' }" type="button" @click="openTabFromMenu('menu')">
                 <span class="app-menu-item-title">菜单</span>
                 <span class="app-menu-item-desc">维护分类与菜品</span>
+              </button>
+              <button class="app-menu-item" :class="{ active: activeTab === 'ledger' }" type="button" @click="openTabFromMenu('ledger')">
+                <span class="app-menu-item-title">对账</span>
+                <span class="app-menu-item-desc">查看流水和利润</span>
               </button>
               <a class="app-menu-item" href="coupons.html">
                 <span class="app-menu-item-title">优惠券</span>
@@ -252,6 +258,101 @@
         <div v-else class="empty">当前筛选条件下没有订单。</div>
       </section>
 
+      <section v-show="activeTab === 'ledger'">
+        <div class="stats finance-stats">
+          <div class="stat">
+            <div class="stat-label">7天流水</div>
+            <div class="stat-value">{{ money(financeSummary.revenue_amount) }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">商品成本</div>
+            <div class="stat-value">{{ money(financeSummary.cost_amount) }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">预计利润</div>
+            <div class="stat-value">{{ money(financeSummary.profit_amount) }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">利润率</div>
+            <div class="stat-value">{{ financeSummary.profit_rate || '0.00' }}%</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="toolbar finance-toolbar">
+            <label class="field">
+              <span class="field-label">统计范围</span>
+              <select class="select" v-model.number="financeDays" @change="loadFinance">
+                <option :value="7">最近7天</option>
+                <option :value="14">最近14天</option>
+                <option :value="30">最近30天</option>
+              </select>
+            </label>
+            <button class="button" type="button" :disabled="financeLoading" @click="loadFinance">
+              {{ financeLoading ? '计算中' : '刷新对账' }}
+            </button>
+          </div>
+          <div class="panel-note">
+            统计配送日 {{ financeSummary.start_date || '-' }} 至 {{ financeSummary.end_date || '-' }}；
+            有效订单 {{ financeSummary.order_count || 0 }} 单，商品 {{ financeSummary.item_count || 0 }} 份，
+            优惠 {{ money(financeSummary.discount_amount) }}，客单 {{ money(financeSummary.average_order_amount) }}。
+            <span v-if="financeSummary.missing_cost_items">还有 {{ financeSummary.missing_cost_items }} 份商品未设置成本。</span>
+          </div>
+        </div>
+
+        <div class="finance-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">每日流水</h2>
+                <div class="panel-note">按配送日期汇总，已关闭和已退款订单不计入。</div>
+              </div>
+            </div>
+            <div class="finance-list" v-if="financeDailyRows.length">
+              <div class="finance-row finance-row-head">
+                <span>日期</span>
+                <span>流水</span>
+                <span>成本</span>
+                <span>利润</span>
+              </div>
+              <div class="finance-row" v-for="row in financeDailyRows" :key="row.date">
+                <span>
+                  <strong>{{ row.date }}</strong>
+                  <em>{{ row.order_count }}单 / {{ row.item_count }}份</em>
+                </span>
+                <span>{{ money(row.revenue_amount) }}</span>
+                <span>{{ money(row.cost_amount) }}</span>
+                <span :class="{ negative: Number(row.profit_amount || 0) < 0 }">{{ money(row.profit_amount) }}</span>
+              </div>
+            </div>
+            <div v-else class="empty">{{ financeLoading ? '正在计算对账...' : '暂无对账数据。' }}</div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">商品利润榜</h2>
+                <div class="panel-note">按利润排序，成本为空的菜品会标记出来。</div>
+              </div>
+            </div>
+            <div class="finance-dish-list" v-if="financeDishRows.length">
+              <article class="finance-dish-row" v-for="row in financeDishRows" :key="`${row.dish_id || 'x'}-${row.dish_name}`">
+                <div>
+                  <strong>{{ row.dish_name }}</strong>
+                  <div class="muted">{{ row.quantity }} 份 · 销售 {{ money(row.sales_amount) }}</div>
+                  <span class="tag warning" v-if="row.missing_cost_items">{{ row.missing_cost_items }}份缺成本</span>
+                </div>
+                <div class="finance-dish-money">
+                  <span>成本 {{ money(row.cost_amount) }}</span>
+                  <strong :class="{ negative: Number(row.profit_amount || 0) < 0 }">{{ money(row.profit_amount) }}</strong>
+                </div>
+              </article>
+            </div>
+            <div v-else class="empty">{{ financeLoading ? '正在计算商品利润...' : '暂无商品流水。' }}</div>
+          </section>
+        </div>
+      </section>
+
       <section v-show="activeTab === 'menu'">
         <div class="stats">
           <div class="stat">
@@ -304,7 +405,10 @@
                 <div>
                   <div class="strong">{{ dish.name }}</div>
                   <div class="muted">{{ categoryName(dish.category_id) }} · 排序 {{ dish.sort_order }}</div>
-                  <div style="margin: 8px 0; font-size: 20px; font-weight: 950;">{{ money(dish.price) }}</div>
+                  <div class="dish-money-line">
+                    <strong>{{ money(dish.price) }}</strong>
+                    <span>成本 {{ money(dish.cost_price) }}</span>
+                  </div>
                   <div class="muted">{{ dish.description || '未填写简介' }}</div>
                   <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
                     <span class="tag" :class="dish.is_active ? 'success' : 'danger'">{{ dish.is_active ? '上架' : '下架' }}</span>
@@ -568,6 +672,10 @@
               <input class="input" v-model="dishEditor.price" type="number" step="0.01">
             </label>
             <label class="field">
+              <span class="field-label">成本</span>
+              <input class="input" v-model="dishEditor.cost_price" type="number" step="0.01">
+            </label>
+            <label class="field">
               <span class="field-label">库存（-1 不限）</span>
               <input class="input" v-model="dishEditor.stock" type="number">
             </label>
@@ -609,7 +717,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vant@3/lib/vant.min.js"></script>
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
-  <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0240"></script>
+  <script src="js/api.js?v=20260501-0250"></script>
+  <script src="js/workbench.js?v=20260501-0250"></script>
 </body>
 </html>

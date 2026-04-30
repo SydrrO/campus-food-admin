@@ -1,8 +1,16 @@
 # 校园餐饮商家后台
 
-版本：`v2.4`
+版本：`v2.5`
 
 这是餐饮商家后台的升级源码仓库，当前重点维护后台管理页面、优惠券管理、订单筛选和用户数据展示。仓库只保存源码，不保存数据库、证书、SSH 私钥或服务器密码。
+
+## v2.5 主要内容
+
+- 后台主页面标题更新为 `v2.5`。
+- 右上角菜单新增独立“对账”入口，可查看最近 7/14/30 天有效订单流水、成本、利润、利润率、日流水和商品利润榜。
+- 菜品编辑新增“成本”字段，菜品列表同步展示成本；新订单会把当时的商品成本写入订单明细快照。
+- 对账利润按 `实收流水 - 商品成本` 计算，已关闭和已退款订单不计入；旧订单若没有成本快照，则用当前菜品成本兜底。
+- 积分发放改为按 `实付金额 + 优惠抵扣金额` 计算，使用优惠券免掉的金额也会换算成积分；用户已消费积分不会被刷新逻辑覆盖。
 
 ## v2.4 主要内容
 
@@ -131,7 +139,7 @@
 
 ## 验收清单
 
-1. 打开后台主页，顶部应显示 `赛杜甄选-后台 v2.4`，默认进入订单界面。
+1. 打开后台主页，顶部应显示 `赛杜甄选-后台 v2.5`，默认进入订单界面。
 2. 进入用户数据页，用户卡片只展示头像、用户 ID、昵称、累计消费、操作。
 3. 用户 ID 应为四位数格式，例如 `0001`。
 4. 会员头像应有金色边框。
@@ -164,16 +172,35 @@
 31. 当优惠金额大于或等于订单应付金额时，创建订单应返回 `status=confirmed`、`actual_amount=0.00`、`expire_time=null`，且不应调用微信支付统一下单。
 32. 订单列表底部应按卡片式工单展示，手机端联系人、配送、菜品、金额和操作按钮不应挤在一起。
 33. 后台顶部品牌名应显示为 `赛杜甄选-后台`，版本号以小字号跟随。
+34. 菜品编辑弹窗应能填写成本，新订单应记录商品成本快照。
+35. 对账页应能展示最近流水、成本、利润、利润率、每日流水和商品利润榜。
+36. 使用优惠券抵扣时，抵扣金额也应计入新增积分的计算基数。
 
 ## 部署说明
 
-当前这版更新订单列表卡片展示、后台版本号和主页面静态资源缓存号，部署时应先备份服务器已有文件，再覆盖以下文件：
+当前这版新增对账页、菜品成本字段、积分发放口径调整和后台版本号，部署时应先备份服务器已有文件和数据库，再覆盖以下文件：
 
 - `admin/index.html`
 - `admin/coupons.html`
 - `admin/css/workbench.css`
 - `admin/js/workbench.js`
+- `admin/js/api.js`
+- `backend/app/api/v1/router.py`
+- `backend/app/api/v1/endpoints/admin_finance.py`
+- `backend/app/api/v1/endpoints/admin_catalog.py`
+- `backend/app/api/v1/endpoints/orders.py`
+- `backend/app/models/dish.py`
+- `backend/app/models/order_item.py`
+- `backend/app/schemas/admin_catalog.py`
+- `backend/app/schemas/admin_finance.py`
+- `backend/app/services/membership.py`
+- `backend/scripts/migrate_finance_v2_5.py`
 - `admin/js/coupons.js`
+
+数据库需要新增字段：
+
+- `dishes.cost_price`
+- `order_items.cost_price`
 
 这是纯前端静态文件更新，部署后通常不需要重启后端服务。
 

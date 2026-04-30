@@ -33,6 +33,7 @@ class DishCreateIn(BaseModel):
     detail_content: Optional[str] = None
     image_url: Optional[str] = None
     price: Decimal
+    cost_price: Decimal = Decimal("0.00")
     stock: int = -1
     sort_order: int = 0
     is_active: bool = True
@@ -46,6 +47,7 @@ class DishUpdateIn(BaseModel):
     detail_content: Optional[str] = None
     image_url: Optional[str] = None
     price: Decimal
+    cost_price: Decimal = Decimal("0.00")
     stock: int = -1
     sort_order: int = 0
     is_active: bool = True
@@ -64,6 +66,7 @@ class DishAdminOut(BaseModel):
     detail_content: Optional[str] = None
     image_url: Optional[str] = None
     price: Decimal
+    cost_price: Decimal = Decimal("0.00")
     stock: int
     sort_order: int
     is_active: bool

@@ -14,6 +14,7 @@ class Dish(Base):
     detail_content = Column(Text)
     image_url = Column(String(255))
     price = Column(DECIMAL(10, 2), nullable=False)
+    cost_price = Column(DECIMAL(10, 2), nullable=False, default=0)
     stock = Column(Integer, default=-1)
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)

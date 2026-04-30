@@ -1,6 +1,7 @@
 const api = {
   adminLogin: (username, password) => login(username, password),
   getOperationsOverview: (snapshotDate) => request(`/admin/operations/overview${snapshotDate ? `?snapshot_date=${snapshotDate}` : ''}`),
+  getReconciliation: (params = {}) => request(`/admin/reconciliation?${new URLSearchParams(params)}`),
   getCategories: () => request('/admin/categories'),
   createCategory: (data) => request('/admin/categories', { method: 'POST', body: JSON.stringify(data) }),
   updateCategory: (id, data) => request(`/admin/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

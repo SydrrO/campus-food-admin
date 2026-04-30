@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import admin_auth, admin_catalog, admin_config, admin_couriers, admin_members, admin_orders, auth, config, dishes, orders, payment, users
+from app.api.v1.endpoints import admin_auth, admin_catalog, admin_config, admin_couriers, admin_finance, admin_members, admin_orders, auth, config, dishes, orders, payment, users
 
 api_router = APIRouter()
 
@@ -11,6 +11,7 @@ api_router.include_router(auth.router, prefix="/v1/auth", tags=["auth"])
 api_router.include_router(admin_auth.router, prefix="/v1/admin/auth", tags=["admin-auth"])
 api_router.include_router(admin_catalog.router, prefix="/v1/admin", tags=["admin-catalog"])
 api_router.include_router(admin_orders.router, prefix="/v1/admin", tags=["admin-orders"])
+api_router.include_router(admin_finance.router, prefix="/v1/admin", tags=["admin-finance"])
 api_router.include_router(admin_members.router, prefix="/v1/admin", tags=["admin-members"])
 api_router.include_router(admin_config.router, prefix="/v1/admin", tags=["admin-config"])
 api_router.include_router(admin_couriers.router, prefix="/v1/admin", tags=["admin-couriers"])
