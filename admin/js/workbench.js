@@ -52,10 +52,11 @@ createApp({
   setup() {
     const readInitialTab = () => {
       const tab = (window.location.hash || "").replace("#", "");
-      return ["users", "orders", "menu"].includes(tab) ? tab : "users";
+      return ["users", "orders", "menu"].includes(tab) ? tab : "orders";
     };
 
     const activeTab = ref(readInitialTab());
+    const navMenuOpen = ref(false);
     const loading = ref(false);
     const adminMeta = ref({ env: "-", mode: "-", updatedAt: "" });
 
@@ -413,6 +414,19 @@ createApp({
       if (tab === "users" && !users.value.length) await loadUsers();
       if (tab === "orders" && !orders.value.length) await loadOrders();
       if (tab === "menu" && !dishes.value.length) await loadMenu();
+    };
+
+    const toggleNavMenu = () => {
+      navMenuOpen.value = !navMenuOpen.value;
+    };
+
+    const closeNavMenu = () => {
+      navMenuOpen.value = false;
+    };
+
+    const openTabFromMenu = async (tab) => {
+      closeNavMenu();
+      await setTab(tab);
     };
 
     const loadMeta = async () => {
@@ -882,6 +896,7 @@ createApp({
 
     return {
       activeTab,
+      navMenuOpen,
       loading,
       adminMeta,
       API_BASE_URL,
@@ -926,6 +941,9 @@ createApp({
       filteredDishes,
       menuSummary,
       setTab,
+      toggleNavMenu,
+      closeNavMenu,
+      openTabFromMenu,
       loadUsers,
       resetUserSearch,
       toggleZeroSpendUsers,

@@ -26,6 +26,7 @@ createApp({
     const userIdInput = ref(new URLSearchParams(window.location.search).get("user_id") || "");
     const selectedUser = ref(null);
     const coupons = ref([]);
+    const navMenuOpen = ref(false);
     const loading = ref(false);
     const issueLoading = ref(false);
     const deletingCouponId = ref(null);
@@ -235,6 +236,14 @@ createApp({
       logout();
     };
 
+    const toggleNavMenu = () => {
+      navMenuOpen.value = !navMenuOpen.value;
+    };
+
+    const closeNavMenu = () => {
+      navMenuOpen.value = false;
+    };
+
     onMounted(() => {
       if (userIdInput.value) {
         loadUserCoupons();
@@ -246,6 +255,7 @@ createApp({
       userIdInput,
       selectedUser,
       coupons,
+      navMenuOpen,
       loading,
       issueLoading,
       deletingCouponId,
@@ -265,6 +275,8 @@ createApp({
       closeUsedCouponDialog,
       deleteCoupon,
       logoutAdmin,
+      toggleNavMenu,
+      closeNavMenu,
       statusLabel,
       statusClass,
       formatTime,

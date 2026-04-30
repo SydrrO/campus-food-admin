@@ -3,47 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>优惠券发放 - 赛杜商家后台</title>
+  <title>优惠券发放 - 赛杜商家后台 v1.6</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0120">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0160">
 </head>
 <body>
   <div id="app" class="admin-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-title">赛杜后台</div>
-        <div class="brand-subtitle">优惠券发放</div>
-      </div>
-
-      <nav class="nav">
-        <a class="nav-button" href="index.html#users">
-          <span class="nav-title">用户</span>
-          <span class="nav-desc">查看 users 表字段</span>
-        </a>
-        <a class="nav-button" href="index.html#orders">
-          <span class="nav-title">订单</span>
-          <span class="nav-desc">处理订单和打印</span>
-        </a>
-        <a class="nav-button" href="index.html#menu">
-          <span class="nav-title">菜单</span>
-          <span class="nav-desc">维护分类与菜品</span>
-        </a>
-        <a class="nav-button active" href="coupons.html">
-          <span class="nav-title">优惠券</span>
-          <span class="nav-desc">发放和删除</span>
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div>API：{{ API_BASE_URL }}</div>
-        <button class="button secondary" type="button" @click="logoutAdmin">退出登录</button>
-      </div>
-    </aside>
-
     <main class="main">
       <header class="topbar">
-        <div>
-          <h1 class="page-title">优惠券发放</h1>
+        <div class="topbar-copy">
+          <div class="top-brand">
+            <div class="top-brand-title">赛杜后台 v1.6</div>
+            <div class="top-brand-subtitle">商家后台</div>
+          </div>
+          <div>
+            <h1 class="page-title">优惠券发放</h1>
+          </div>
         </div>
         <div class="top-actions">
           <span class="pill">当前用户：{{ selectedUser ? `#${selectedUser.id}` : '-' }}</span>
@@ -51,8 +26,36 @@
           <button class="button secondary" type="button" :disabled="loading || !selectedUser" @click="loadUserCoupons">
             {{ loading ? '加载中' : '刷新' }}
           </button>
+          <div class="app-menu" @click.stop>
+            <button class="menu-trigger" type="button" :class="{ active: navMenuOpen }" aria-label="打开页面菜单" :aria-expanded="String(navMenuOpen)" @click="toggleNavMenu">
+              <span class="menu-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            </button>
+            <div class="app-menu-popover" v-if="navMenuOpen">
+              <a class="app-menu-item" href="index.html#orders">
+                <span class="app-menu-item-title">订单</span>
+                <span class="app-menu-item-desc">处理订单和打单</span>
+              </a>
+              <a class="app-menu-item" href="index.html#users">
+                <span class="app-menu-item-title">用户</span>
+                <span class="app-menu-item-desc">查看用户和消费</span>
+              </a>
+              <a class="app-menu-item" href="index.html#menu">
+                <span class="app-menu-item-title">菜单</span>
+                <span class="app-menu-item-desc">维护分类与菜品</span>
+              </a>
+              <a class="app-menu-item active" href="coupons.html">
+                <span class="app-menu-item-title">优惠券</span>
+                <span class="app-menu-item-desc">发放和删除优惠券</span>
+              </a>
+              <div class="app-menu-meta">
+                <div>API：{{ API_BASE_URL }}</div>
+                <button class="button small secondary" type="button" @click="logoutAdmin">退出登录</button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
+      <div class="menu-scrim" v-if="navMenuOpen" @click="closeNavMenu"></div>
 
       <div class="stats">
         <div class="stat">
@@ -261,6 +264,6 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260430-2355"></script>
-  <script src="js/coupons.js?v=20260501-0018"></script>
+  <script src="js/coupons.js?v=20260501-0160"></script>
 </body>
 </html>

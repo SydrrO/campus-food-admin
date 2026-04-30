@@ -3,65 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜商家后台 v1.5</title>
+  <title>赛杜商家后台 v1.6</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0140">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0160">
 </head>
 <body>
   <div id="app" class="admin-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-title">赛杜后台 v1.5</div>
-        <div class="brand-subtitle">只保留用户、订单、菜单。每个按钮都对应真实接口。</div>
-      </div>
-
-      <nav class="nav">
-        <button class="nav-button" :class="{ active: activeTab === 'users' }" type="button" @click="setTab('users')">
-          <span class="nav-title">用户</span>
-          <span class="nav-desc">查看数据库 users 表所有字段</span>
-        </button>
-        <button class="nav-button" :class="{ active: activeTab === 'orders' }" type="button" @click="setTab('orders')">
-          <span class="nav-title">订单</span>
-          <span class="nav-desc">按状态归类、看明细、打印小票</span>
-        </button>
-        <button class="nav-button" :class="{ active: activeTab === 'menu' }" type="button" @click="setTab('menu')">
-          <span class="nav-title">菜单</span>
-          <span class="nav-desc">维护分类与菜品增删改</span>
-        </button>
-        <a class="nav-button" href="coupons.html">
-          <span class="nav-title">优惠券</span>
-          <span class="nav-desc">按用户 ID 发放和删除优惠券</span>
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div>环境：{{ adminMeta.env }}</div>
-        <div>支付：{{ adminMeta.mode }}</div>
-        <button class="button secondary" type="button" @click="logoutAdmin">退出登录</button>
-      </div>
-    </aside>
-
     <main class="main">
       <header class="topbar">
-        <div>
-          <h1 class="page-title" v-if="activeTab === 'users'">用户数据</h1>
-          <div class="page-title-row" v-if="activeTab === 'orders'">
-            <h1 class="page-title">订单处理</h1>
-            <button class="button secondary" type="button" :disabled="deliverySummaryLoading || orderLoading" @click="openDeliverySummary">
-              {{ deliverySummaryLoading ? '统计中' : '配送详情' }}
-            </button>
+        <div class="topbar-copy">
+          <div class="top-brand">
+            <div class="top-brand-title">赛杜后台 v1.6</div>
+            <div class="top-brand-subtitle">商家后台</div>
           </div>
-          <h1 class="page-title" v-if="activeTab === 'menu'">菜单数据</h1>
-          <div class="page-note" v-if="activeTab === 'users'">用户列表保留常用字段，更多资料从行尾按钮打开，手机上也能快速扫用户和消费情况。</div>
-          <div class="page-note" v-if="activeTab === 'orders'">订单按状态归类展示，列表直接显示“谁点了什么”，详情和列表共用同一套后端数据，状态变更后会自动同步。</div>
-          <div class="page-note" v-if="activeTab === 'menu'">菜单页只保留真实可用操作：分类新增/编辑/删除，菜品新增/编辑/上下架/售罄/删除。</div>
+          <div>
+            <h1 class="page-title" v-if="activeTab === 'users'">用户数据</h1>
+            <div class="page-title-row" v-if="activeTab === 'orders'">
+              <h1 class="page-title">订单处理</h1>
+              <button class="button secondary" type="button" :disabled="deliverySummaryLoading || orderLoading" @click="openDeliverySummary">
+                {{ deliverySummaryLoading ? '统计中' : '配送详情' }}
+              </button>
+            </div>
+            <h1 class="page-title" v-if="activeTab === 'menu'">菜单数据</h1>
+            <div class="page-note" v-if="activeTab === 'users'">用户列表保留常用字段，更多资料从行尾按钮打开，手机上也能快速扫用户和消费情况。</div>
+            <div class="page-note" v-if="activeTab === 'orders'">订单按状态归类展示，列表直接显示“谁点了什么”，详情和列表共用同一套后端数据，状态变更后会自动同步。</div>
+            <div class="page-note" v-if="activeTab === 'menu'">菜单页只保留真实可用操作：分类新增/编辑/删除，菜品新增/编辑/上下架/售罄/删除。</div>
+          </div>
         </div>
         <div class="top-actions">
           <span class="pill">API：{{ API_BASE_URL }}</span>
           <span class="pill">刷新：{{ adminMeta.updatedAt || '-' }}</span>
-          <button class="button secondary" type="button" @click="loadMeta">刷新环境</button>
+          <button class="button secondary env-refresh" type="button" @click="loadMeta">刷新环境</button>
+          <div class="app-menu" @click.stop>
+            <button class="menu-trigger" type="button" :class="{ active: navMenuOpen }" aria-label="打开页面菜单" :aria-expanded="String(navMenuOpen)" @click="toggleNavMenu">
+              <span class="menu-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            </button>
+            <div class="app-menu-popover" v-if="navMenuOpen">
+              <button class="app-menu-item" :class="{ active: activeTab === 'orders' }" type="button" @click="openTabFromMenu('orders')">
+                <span class="app-menu-item-title">订单</span>
+                <span class="app-menu-item-desc">处理订单和打单</span>
+              </button>
+              <button class="app-menu-item" :class="{ active: activeTab === 'users' }" type="button" @click="openTabFromMenu('users')">
+                <span class="app-menu-item-title">用户</span>
+                <span class="app-menu-item-desc">查看用户和消费</span>
+              </button>
+              <button class="app-menu-item" :class="{ active: activeTab === 'menu' }" type="button" @click="openTabFromMenu('menu')">
+                <span class="app-menu-item-title">菜单</span>
+                <span class="app-menu-item-desc">维护分类与菜品</span>
+              </button>
+              <a class="app-menu-item" href="coupons.html">
+                <span class="app-menu-item-title">优惠券</span>
+                <span class="app-menu-item-desc">发放和删除优惠券</span>
+              </a>
+              <div class="app-menu-meta">
+                <div>环境：{{ adminMeta.env }}</div>
+                <div>支付：{{ adminMeta.mode }}</div>
+                <button class="button small secondary" type="button" @click="logoutAdmin">退出登录</button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
+      <div class="menu-scrim" v-if="navMenuOpen" @click="closeNavMenu"></div>
 
       <section v-show="activeTab === 'users'">
         <div class="stats">
@@ -596,6 +599,6 @@
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0140"></script>
+  <script src="js/workbench.js?v=20260501-0160"></script>
 </body>
 </html>
