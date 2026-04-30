@@ -363,6 +363,20 @@ createApp({
         .filter((item) => item.name && item.quantity > 0);
     };
 
+    const orderItemsFromSummary = (order) => parseItemSummary(order?.item_summary);
+    const orderItemCount = (order) => {
+      const explicitCount = Number(order?.item_count || 0);
+      if (explicitCount > 0) return explicitCount;
+      return orderItemsFromSummary(order).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    };
+    const orderItemChips = (order, limit = 6) => orderItemsFromSummary(order).slice(0, limit);
+    const orderExtraItemCount = (order, limit = 6) => Math.max(orderItemsFromSummary(order).length - limit, 0);
+    const compactOrderNo = (orderNo) => {
+      const text = String(orderNo || "");
+      if (text.length <= 14) return text || "-";
+      return `${text.slice(0, 8)}...${text.slice(-4)}`;
+    };
+
     const dishCategoryName = (dishName) => {
       const dish = dishes.value.find((item) => item.name === dishName);
       return dish ? categoryName(dish.category_id) : "其他";
@@ -981,6 +995,10 @@ createApp({
       deliverySummaryFilterText,
       deliverySummaryNote,
       orderGroups,
+      orderItemCount,
+      orderItemChips,
+      orderExtraItemCount,
+      compactOrderNo,
       orderSummary,
       menuLoading,
       categories,

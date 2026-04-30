@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜商家后台 v2.2</title>
+  <title>赛杜商家后台 v2.3</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0220">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0230">
 </head>
 <body>
   <div id="app" class="admin-shell">
@@ -13,7 +13,7 @@
       <header class="topbar">
         <div class="topbar-copy">
           <div class="top-brand">
-            <div class="top-brand-title"><span class="brand-name">赛杜后台</span><span class="brand-version">v2.2</span></div>
+            <div class="top-brand-title"><span class="brand-name">赛杜后台</span><span class="brand-version">v2.3</span></div>
             <div class="top-brand-subtitle">商家后台</div>
           </div>
           <div>
@@ -193,20 +193,50 @@
               <span class="tag" :class="statusClass(group.status)">{{ group.items.length }} 单</span>
             </div>
             <div class="order-list">
-              <div class="order-row" v-for="order in group.items" :key="order.order_no">
-                <div class="order-main">
-                  <div class="strong">{{ order.contact_name }} / {{ order.contact_phone }}</div>
-                  <div class="muted mono">{{ order.order_no }}</div>
+              <article class="order-card" v-for="order in group.items" :key="order.order_no">
+                <div class="order-card-top">
+                  <div class="order-customer">
+                    <div class="order-customer-name">{{ order.contact_name || '未填写姓名' }}</div>
+                    <div class="order-phone">{{ order.contact_phone || '未填写电话' }}</div>
+                  </div>
+                  <div class="order-status-stack">
+                    <span class="tag" :class="statusClass(order.status)">{{ statusLabel(order.status) }}</span>
+                    <span class="order-meal-pill">{{ mealLabel(order.meal_type) }}</span>
+                  </div>
                 </div>
-                <div>
-                  <div class="strong">{{ mealLabel(order.meal_type) }} · {{ order.delivery_date }}</div>
-                  <div class="muted">{{ order.delivery_address }}</div>
+
+                <div class="order-card-body">
+                  <div class="order-info-block address">
+                    <span class="order-info-label">配送</span>
+                    <strong>{{ order.delivery_address || '未填写地址' }}</strong>
+                    <span>{{ order.delivery_date }}</span>
+                  </div>
+                  <div class="order-info-block items">
+                    <div class="order-items-head">
+                      <span class="order-info-label">菜品</span>
+                      <strong>{{ orderItemCount(order) }} 件</strong>
+                    </div>
+                    <div class="order-item-chips" v-if="orderItemChips(order).length">
+                      <span class="order-item-chip" v-for="item in orderItemChips(order)" :key="`${order.order_no}-${item.name}`">
+                        <span>{{ item.name }}</span>
+                        <strong>x{{ item.quantity }}</strong>
+                      </span>
+                      <span class="order-item-chip more" v-if="orderExtraItemCount(order)">+{{ orderExtraItemCount(order) }} 项</span>
+                    </div>
+                    <div class="order-items-empty" v-else>未读取到商品明细</div>
+                  </div>
                 </div>
-                <div>
-                  <div class="strong">{{ order.item_summary || '未读取到商品明细' }}</div>
-                  <div class="muted">共 {{ order.item_count || 0 }} 件 · 实付 {{ money(order.actual_amount) }} · 备注 {{ order.remark || '无' }}</div>
+
+                <div class="order-card-meta">
+                  <div class="order-price">{{ money(order.actual_amount) }}</div>
+                  <div class="order-meta-line">
+                    <span class="mono">{{ compactOrderNo(order.order_no) }}</span>
+                    <span>{{ formatTime(order.created_at) }}</span>
+                  </div>
+                  <div class="order-remark" :class="{ empty: !order.remark }">备注：{{ shortText(order.remark || '无', 44) }}</div>
                 </div>
-                <div class="row-actions">
+
+                <div class="row-actions order-card-actions">
                   <button class="button small secondary" type="button" @click="openOrder(order)">详情</button>
                   <button class="button small success" v-if="order.status === 'confirmed'" type="button" @click="markOrder(order, 'delivering')">处理中</button>
                   <button class="button small success" v-if="order.status === 'delivering'" type="button" @click="markOrder(order, 'completed')">完成</button>
@@ -215,7 +245,7 @@
                   </button>
                   <button class="button small secondary" v-if="canPrintOrder(order)" type="button" @click="printReceipt(order.order_no)">打印</button>
                 </div>
-              </div>
+              </article>
             </div>
           </article>
         </div>
@@ -580,6 +610,6 @@
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0220"></script>
+  <script src="js/workbench.js?v=20260501-0230"></script>
 </body>
 </html>

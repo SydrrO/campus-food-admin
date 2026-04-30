@@ -915,23 +915,208 @@ select {
 
 .order-list {
   display: grid;
+  gap: 12px;
+  padding: 12px;
 }
 
-.order-row {
+.order-card {
   display: grid;
-  grid-template-columns: 1.2fr 0.9fr 1.1fr auto;
+  grid-template-columns: minmax(230px, 0.9fr) minmax(300px, 1.45fr) minmax(180px, 0.7fr);
   gap: 12px;
-  padding: 13px 12px;
-  border-bottom: 1px solid var(--line);
+  align-items: stretch;
+  padding: 12px;
+  border: 1px solid rgba(10, 186, 181, 0.26);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(10, 186, 181, 0.18), rgba(10, 186, 181, 0) 4px),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(237, 255, 253, 0.72));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 14px 34px rgba(4, 70, 73, 0.07);
+  transition:
+    transform 180ms var(--ease),
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.order-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(10, 186, 181, 0.46);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 18px 42px rgba(4, 70, 73, 0.1);
+}
+
+.order-card-top {
+  display: grid;
+  gap: 12px;
+  align-content: space-between;
+  min-width: 0;
+}
+
+.order-customer {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.order-customer-name {
+  color: #06373b;
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-phone {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.order-status-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
   align-items: center;
 }
 
-.order-row:last-child {
-  border-bottom: 0;
+.order-meal-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid rgba(185, 154, 93, 0.34);
+  border-radius: 999px;
+  color: #7a6230;
+  background: rgba(255, 248, 232, 0.72);
+  font-size: 12px;
+  font-weight: 900;
 }
 
-.order-main {
+.order-card-body {
   min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.order-info-block {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid rgba(10, 186, 181, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.order-info-block strong {
+  min-width: 0;
+  color: #06373b;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.order-info-block > span:not(.order-info-label) {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.order-info-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.order-items-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.order-item-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.order-item-chip {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(10, 186, 181, 0.22);
+  border-radius: 999px;
+  background: rgba(237, 255, 253, 0.72);
+  color: #06373b;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.order-item-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-item-chip strong {
+  color: #087b80;
+  font-size: 12px;
+}
+
+.order-item-chip.more {
+  color: #7a6230;
+  background: rgba(255, 248, 232, 0.72);
+  border-color: rgba(185, 154, 93, 0.3);
+}
+
+.order-items-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.order-card-meta {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.order-price {
+  color: #06373b;
+  font-size: 22px;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+}
+
+.order-meta-line {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.order-remark {
+  color: #735c2d;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.order-remark.empty {
+  color: var(--muted);
+}
+
+.order-card-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid rgba(10, 186, 181, 0.18);
 }
 
 .strong {
@@ -1842,6 +2027,19 @@ body {
   .user-field strong {
     text-align: left;
   }
+
+  .order-card {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.78fr);
+  }
+
+  .order-card-body,
+  .order-card-actions {
+    grid-column: 1 / -1;
+  }
+
+  .order-card-actions {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2257,6 +2455,66 @@ body {
     min-width: 0;
   }
 
+  .order-list {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .order-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px 10px;
+  }
+
+  .order-card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .order-customer-name {
+    font-size: 17px;
+  }
+
+  .order-status-stack {
+    justify-content: flex-end;
+  }
+
+  .order-card-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .order-card-meta {
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+    gap: 6px 10px;
+    align-items: start;
+  }
+
+  .order-price {
+    font-size: 19px;
+  }
+
+  .order-meta-line {
+    text-align: right;
+  }
+
+  .order-remark {
+    grid-column: 1 / -1;
+  }
+
+  .order-card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    padding-top: 9px;
+  }
+
+  .order-card-actions .button {
+    width: 100%;
+    min-width: 0;
+  }
+
   .split {
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
@@ -2532,6 +2790,32 @@ body {
 
   .order-row .row-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .order-card-top {
+    display: grid;
+  }
+
+  .order-status-stack {
+    justify-content: flex-start;
+  }
+
+  .order-info-block {
+    padding: 9px;
+  }
+
+  .order-item-chip {
+    max-width: 100%;
+    min-height: 26px;
+    padding: 0 8px;
+  }
+
+  .order-card-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .order-meta-line {
+    text-align: left;
   }
 
   .dish-actions {
