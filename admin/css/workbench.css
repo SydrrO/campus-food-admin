@@ -252,6 +252,14 @@ select {
   flex-wrap: wrap;
 }
 
+.toolbar-actions.order-actions {
+  flex-wrap: nowrap;
+}
+
+.toolbar-actions.order-actions .button {
+  white-space: nowrap;
+}
+
 .field {
   display: grid;
   gap: 6px;
@@ -901,6 +909,21 @@ select {
     justify-content: flex-start;
   }
 
+  .toolbar .toolbar-actions.order-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+    width: 100%;
+  }
+
+  .toolbar-actions.order-actions .button {
+    min-width: 0;
+    width: 100%;
+    min-height: 38px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
   .topbar,
   .panel-head {
     display: grid;
@@ -1318,5 +1341,12 @@ body {
 
   .user-field strong {
     text-align: left;
+  }
+}
+
+@media (max-width: 360px) {
+  .toolbar-actions.order-actions .button {
+    padding: 0 4px;
+    font-size: 11px;
   }
 }

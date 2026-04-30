@@ -342,7 +342,8 @@ createApp({
       return dish ? categoryName(dish.category_id) : "其他";
     };
 
-    const buildMerchantReceiptText = async (mealType) => {
+    const buildMerchantReceiptText = async (mealType, options = {}) => {
+      const includeEmpty = options.includeEmpty !== false;
       const deliveryDate = orderFilters.value.delivery_date || defaultOrderDeliveryDate();
       if (!dishes.value.length || !categories.value.length) {
         await loadMenu();
@@ -361,7 +362,7 @@ createApp({
         });
 
       if (!totals.size) {
-        return `${deliveryDate} ${mealLabel(mealType)}\n暂无需要备餐的有效订单`;
+        return includeEmpty ? `${deliveryDate} ${mealLabel(mealType)}\n暂无需要备餐的有效订单` : "";
       }
 
       const dishOrder = new Map(dishes.value.map((dish, index) => [dish.name, Number(dish.sort_order ?? index)]));
@@ -382,10 +383,16 @@ createApp({
       return lines.join("\n");
     };
 
-    const copyMerchantReceipt = async (mealType) => {
+    const buildCombinedMerchantReceiptText = async () => {
+      const lunchText = await buildMerchantReceiptText("lunch");
+      const dinnerText = await buildMerchantReceiptText("dinner", { includeEmpty: false });
+      return [lunchText, dinnerText].filter(Boolean).join("\n\n");
+    };
+
+    const copyMerchantReceipt = async () => {
       try {
-        const text = await buildMerchantReceiptText(mealType);
-        await copyText(text, `${mealLabel(mealType)}商家回执已复制`);
+        const text = await buildCombinedMerchantReceiptText();
+        await copyText(text, "商家回执已复制");
       } catch (error) {
         showToast(error.message || "商家回执生成失败");
       }
