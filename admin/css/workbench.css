@@ -448,6 +448,22 @@ select {
   word-break: break-word;
 }
 
+.user-filter-note {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 247, 0.78);
+}
+
+.zero-spend-row {
+  opacity: 0.72;
+}
+
 .tag {
   display: inline-flex;
   align-items: center;
@@ -923,6 +939,10 @@ select {
 
   .user-name-cell {
     max-width: 86px;
+  }
+
+  .user-filter-note {
+    display: grid;
   }
 }
 

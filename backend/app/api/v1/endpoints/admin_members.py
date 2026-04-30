@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_admin
 from app.db.session import get_db
-from app.models import Admin, Order, OrderStatus, User, UserCoupon
+from app.models import Address, Admin, Order, OrderStatus, User, UserCoupon
 from app.schemas.admin_member import (
     AdminCouponIssueIn,
     AdminCouponOut,
@@ -115,6 +115,28 @@ def _serialize_user(db: Session, user: User) -> AdminMemberUserOut:
     )
 
 
+def _default_contact_phone(db: Session, user: User, order_count: int) -> str | None:
+    if order_count <= 0:
+        return None
+
+    default_address = (
+        db.query(Address)
+        .filter(Address.user_id == user.id, Address.is_default.is_(True))
+        .order_by(Address.updated_at.desc(), Address.id.desc())
+        .first()
+    )
+    if default_address and default_address.contact_phone:
+        return default_address.contact_phone
+
+    latest_order = (
+        db.query(Order)
+        .filter(Order.user_id == user.id)
+        .order_by(Order.created_at.desc(), Order.id.desc())
+        .first()
+    )
+    return latest_order.contact_phone if latest_order and latest_order.contact_phone else None
+
+
 def _serialize_raw_user(db: Session, user: User) -> AdminRawUserOut:
     order_count = db.query(Order.id).filter(Order.user_id == user.id).count()
     coupon_count = db.query(UserCoupon.id).filter(UserCoupon.user_id == user.id).count()
@@ -124,7 +146,7 @@ def _serialize_raw_user(db: Session, user: User) -> AdminRawUserOut:
         public_uid=user.public_uid,
         nickname=user.nickname,
         avatar_url=user.avatar_url,
-        phone=user.phone,
+        phone=_default_contact_phone(db, user, order_count),
         is_registered=bool(user.is_registered),
         is_member=bool(user.is_member),
         invite_code=user.invite_code,
@@ -166,6 +188,8 @@ def _build_user_query(
                     User.public_uid.ilike(like_value),
                     User.nickname.ilike(like_value),
                     User.phone.ilike(like_value),
+                    User.id.in_(select(Address.user_id).where(Address.contact_phone.ilike(like_value))),
+                    User.id.in_(select(Order.user_id).where(Order.contact_phone.ilike(like_value))),
                     User.invite_code.ilike(like_value),
                 )
             )
@@ -225,7 +249,7 @@ async def list_raw_users(
     query = _build_user_query(db, keyword=keyword)
     total = query.count()
     users = (
-        query.order_by(User.created_at.desc(), User.id.desc())
+        query.order_by(User.total_spent.desc(), User.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()

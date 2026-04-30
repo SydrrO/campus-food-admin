@@ -63,6 +63,7 @@ createApp({
     const users = ref([]);
     const userTotal = ref(0);
     const userKeyword = ref("");
+    const zeroSpendCollapsed = ref(true);
     const selectedUserDetail = ref(null);
     const userDetailLoading = ref(false);
 
@@ -129,6 +130,7 @@ createApp({
     }[mealType] || mealType || "-");
 
     const boolLabel = (value) => (value ? "是" : "否");
+    const totalSpentNumber = (user) => Number(user?.total_spent || 0) || 0;
     const money = (value) => `¥${Number(value || 0).toFixed(2)}`;
     const formatTime = (value) => {
       if (!value) return "-";
@@ -159,6 +161,22 @@ createApp({
     };
 
     const avatarText = (user) => shortText(user.nickname || user.public_uid || user.id || "U", 1).toUpperCase();
+
+    const sortedUsers = computed(() => [...users.value].sort((a, b) => {
+      const amountDiff = totalSpentNumber(b) - totalSpentNumber(a);
+      if (amountDiff) return amountDiff;
+      return Number(b.id || 0) - Number(a.id || 0);
+    }));
+
+    const zeroSpendUsers = computed(() => sortedUsers.value.filter((user) => totalSpentNumber(user) <= 0));
+    const payingUsers = computed(() => sortedUsers.value.filter((user) => totalSpentNumber(user) > 0));
+    const visibleUsers = computed(() => (
+      zeroSpendCollapsed.value ? payingUsers.value : [...payingUsers.value, ...zeroSpendUsers.value]
+    ));
+
+    const toggleZeroSpendUsers = () => {
+      zeroSpendCollapsed.value = !zeroSpendCollapsed.value;
+    };
 
     const openUserDetail = async (user) => {
       const requestedUserId = user.id;
@@ -409,6 +427,7 @@ createApp({
         const result = await api.getRawUsers(params);
         users.value = result.items || [];
         userTotal.value = result.total || 0;
+        zeroSpendCollapsed.value = true;
       } catch (error) {
         showToast(error.message || "用户数据加载失败");
       } finally {
@@ -859,6 +878,10 @@ createApp({
       API_BASE_URL,
       userLoading,
       users,
+      visibleUsers,
+      zeroSpendUsers,
+      payingUsers,
+      zeroSpendCollapsed,
       userTotal,
       userKeyword,
       selectedUserDetail,
@@ -895,6 +918,7 @@ createApp({
       setTab,
       loadUsers,
       resetUserSearch,
+      toggleZeroSpendUsers,
       openUserDetail,
       closeUserDetail,
       loadOrders,
