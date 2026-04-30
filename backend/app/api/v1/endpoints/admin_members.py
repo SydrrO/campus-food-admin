@@ -21,6 +21,7 @@ from app.schemas.admin_member import (
     AdminRawUserPageOut,
 )
 from app.schemas.response import ResponseModel
+from app.utils.timezone import now_china
 
 
 router = APIRouter()
@@ -239,6 +240,19 @@ async def list_raw_users(
     )
 
 
+@router.get("/users/{user_id}", response_model=ResponseModel[AdminRawUserOut])
+async def get_raw_user(
+    user_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return ResponseModel(code=404, message="User not found", data=None)
+
+    return ResponseModel(data=_serialize_raw_user(db, user))
+
+
 @router.get("/members/users/{user_id}/coupons", response_model=ResponseModel[list[AdminCouponOut]])
 async def list_user_coupons(
     user_id: int,
@@ -315,24 +329,56 @@ async def issue_user_coupon(
         return ResponseModel(code=400, message="Coupon can only be issued as unrevealed or available", data=None)
 
     amount = None
+    revealed_at = None
     title = payload.title or "随机立减券"
     if payload.status == "available":
         try:
-            amount = Decimal(str(payload.amount or "0.50"))
+            amount = Decimal(str(payload.amount or "0.50")).quantize(Decimal("0.01"))
         except (InvalidOperation, ValueError):
             return ResponseModel(code=400, message="Invalid coupon amount", data=None)
         if amount <= 0:
             return ResponseModel(code=400, message="Coupon amount must be greater than zero", data=None)
         amount_text = format(amount.quantize(Decimal("0.01")), "f").rstrip("0").rstrip(".")
         title = payload.title or f"{amount_text}元券"
+        revealed_at = now_china()
 
     coupon = UserCoupon(
         user_id=user_id,
         title=title,
         amount=amount,
         status=payload.status,
+        revealed_at=revealed_at,
     )
     db.add(coupon)
     db.commit()
     db.refresh(coupon)
     return ResponseModel(data=_serialize_coupon(coupon))
+
+
+@router.delete("/members/users/{user_id}/coupons/{coupon_id}", response_model=ResponseModel[AdminCouponOut])
+async def delete_user_coupon(
+    user_id: int,
+    coupon_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return ResponseModel(code=404, message="User not found", data=None)
+
+    coupon = (
+        db.query(UserCoupon)
+        .filter(UserCoupon.id == coupon_id, UserCoupon.user_id == user_id)
+        .with_for_update()
+        .first()
+    )
+    if not coupon:
+        return ResponseModel(code=404, message="Coupon not found", data=None)
+
+    if coupon.status in {"reserved", "used"}:
+        return ResponseModel(code=400, message="Reserved or used coupons cannot be deleted", data=None)
+
+    serialized = _serialize_coupon(coupon)
+    db.delete(coupon)
+    db.commit()
+    return ResponseModel(data=serialized)

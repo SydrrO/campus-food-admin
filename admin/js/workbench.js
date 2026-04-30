@@ -24,9 +24,28 @@ const showConfirmDialog = (options = {}) => {
   return window.confirm(text) ? Promise.resolve() : Promise.reject(new Error(""));
 };
 
-const todayString = () => {
+const dateString = (date) => (
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+);
+
+const todayString = () => dateString(new Date());
+
+const defaultOrderDeliveryDate = () => {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const target = new Date(now);
+  if (now.getHours() >= 12) {
+    target.setDate(target.getDate() + 1);
+  }
+  return dateString(target);
+};
+
+const defaultOrderFilters = () => {
+  return {
+    keyword: "",
+    delivery_date: defaultOrderDeliveryDate(),
+    meal_type: "lunch",
+    status: "confirmed",
+  };
 };
 
 createApp({
@@ -90,12 +109,7 @@ createApp({
     const orderTotal = ref(0);
     const orderStatusCounts = ref([]);
     const orderLastUpdatedAt = ref("");
-    const orderFilters = ref({
-      keyword: "",
-      delivery_date: "",
-      meal_type: "",
-      status: "",
-    });
+    const orderFilters = ref(defaultOrderFilters());
     const selectedOrder = ref(null);
     const orderDetailOpen = ref(false);
     const manualRefundingOrderNo = ref("");
@@ -249,7 +263,7 @@ createApp({
     };
 
     const buildMerchantReceiptText = async (mealType) => {
-      const deliveryDate = orderFilters.value.delivery_date || todayString();
+      const deliveryDate = orderFilters.value.delivery_date || defaultOrderDeliveryDate();
       if (!dishes.value.length || !categories.value.length) {
         await loadMenu();
       }
@@ -371,12 +385,7 @@ createApp({
     };
 
     const resetOrderFilters = () => {
-      orderFilters.value = {
-        keyword: "",
-        delivery_date: "",
-        meal_type: "",
-        status: "",
-      };
+      orderFilters.value = defaultOrderFilters();
       loadOrders();
     };
 
