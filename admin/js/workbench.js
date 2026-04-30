@@ -170,9 +170,11 @@ createApp({
 
     const zeroSpendUsers = computed(() => sortedUsers.value.filter((user) => totalSpentNumber(user) <= 0));
     const payingUsers = computed(() => sortedUsers.value.filter((user) => totalSpentNumber(user) > 0));
-    const visibleUsers = computed(() => (
-      zeroSpendCollapsed.value ? payingUsers.value : [...payingUsers.value, ...zeroSpendUsers.value]
-    ));
+    const isUserSearching = computed(() => Boolean(userKeyword.value.trim()));
+    const visibleUsers = computed(() => {
+      if (isUserSearching.value) return sortedUsers.value;
+      return zeroSpendCollapsed.value ? payingUsers.value : sortedUsers.value;
+    });
 
     const toggleZeroSpendUsers = () => {
       zeroSpendCollapsed.value = !zeroSpendCollapsed.value;
@@ -427,7 +429,7 @@ createApp({
         const result = await api.getRawUsers(params);
         users.value = result.items || [];
         userTotal.value = result.total || 0;
-        zeroSpendCollapsed.value = true;
+        zeroSpendCollapsed.value = !userKeyword.value.trim();
       } catch (error) {
         showToast(error.message || "用户数据加载失败");
       } finally {
@@ -881,6 +883,7 @@ createApp({
       visibleUsers,
       zeroSpendUsers,
       payingUsers,
+      isUserSearching,
       zeroSpendCollapsed,
       userTotal,
       userKeyword,

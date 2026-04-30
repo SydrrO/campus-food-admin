@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from sqlalchemy.orm import Session
 
@@ -16,10 +16,16 @@ LEVEL_TARGETS = {
     2: Decimal("300.00"),
     3: Decimal("700.00"),
 }
+POINTS_PER_YUAN = Decimal("100")
 
 
 def _money(value: Decimal) -> str:
     return str(value.quantize(Decimal("0.01")))
+
+
+def _points_for_amount(value) -> int:
+    amount = Decimal(str(value or "0.00"))
+    return int((amount * POINTS_PER_YUAN).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def get_paid_spend(db: Session, user_id: int) -> Decimal:
@@ -43,7 +49,9 @@ def record_order_spend(db: Session, order: Order) -> None:
     if not user:
         return
 
-    user.total_spent = Decimal(str(user.total_spent or "0.00")) + Decimal(str(order.actual_amount or "0.00"))
+    order_amount = Decimal(str(order.actual_amount or "0.00"))
+    user.total_spent = Decimal(str(user.total_spent or "0.00")) + order_amount
+    user.points = int(user.points or 0) + _points_for_amount(order_amount)
     order.spend_counted_at = order.paid_at
     db.add(user)
     db.add(order)
@@ -59,10 +67,9 @@ def recalculate_user_total_spent(db: Session, user_id: int) -> None:
         .filter(Order.user_id == user_id, Order.status.in_(PAID_ORDER_STATUSES))
         .all()
     )
-    user.total_spent = sum(
-        (Decimal(str(order.actual_amount or "0.00")) for order in paid_orders),
-        Decimal("0.00"),
-    ).quantize(Decimal("0.01"))
+    order_amounts = [Decimal(str(order.actual_amount or "0.00")) for order in paid_orders]
+    user.total_spent = sum(order_amounts, Decimal("0.00")).quantize(Decimal("0.01"))
+    user.points = sum((_points_for_amount(amount) for amount in order_amounts), 0)
     db.add(user)
 
 

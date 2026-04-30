@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜商家后台 v1.2</title>
+  <title>赛杜商家后台 v1.3</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0120">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0130">
 </head>
 <body>
   <div id="app" class="admin-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-title">赛杜后台 v1.2</div>
+        <div class="brand-title">赛杜后台 v1.3</div>
         <div class="brand-subtitle">只保留用户、订单、菜单。每个按钮都对应真实接口。</div>
       </div>
 
@@ -100,10 +100,11 @@
 
           <div class="user-filter-note" v-if="zeroSpendUsers.length">
             <div>
-              <div class="strong">已按累计消费降序排列</div>
-              <div class="muted">0 消费用户默认折叠，当前{{ zeroSpendCollapsed ? '隐藏' : '展开' }} {{ zeroSpendUsers.length }} 位。</div>
+              <div class="strong">{{ isUserSearching ? '搜索结果已展示全部匹配用户' : '已按累计消费降序排列' }}</div>
+              <div class="muted" v-if="isUserSearching">搜索时不会折叠 0 消费用户，保证能查到用户信息。</div>
+              <div class="muted" v-else>0 消费用户默认折叠，当前{{ zeroSpendCollapsed ? '隐藏' : '展开' }} {{ zeroSpendUsers.length }} 位。</div>
             </div>
-            <button class="button small secondary" type="button" @click="toggleZeroSpendUsers">
+            <button v-if="!isUserSearching" class="button small secondary" type="button" @click="toggleZeroSpendUsers">
               {{ zeroSpendCollapsed ? '展开0消费用户' : '折叠0消费用户' }}
             </button>
           </div>
@@ -137,7 +138,7 @@
               </tbody>
             </table>
           </div>
-          <div v-else class="empty">{{ users.length ? '0 消费用户已折叠，点击上方按钮可展开。' : '当前没有用户数据。' }}</div>
+          <div v-else class="empty">{{ userKeyword ? '没有匹配用户。' : (users.length ? '0 消费用户已折叠，点击上方按钮可展开。' : '当前没有用户数据。') }}</div>
         </div>
       </section>
 
@@ -596,6 +597,6 @@
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0120"></script>
+  <script src="js/workbench.js?v=20260501-0130"></script>
 </body>
 </html>
