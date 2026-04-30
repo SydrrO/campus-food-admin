@@ -3,6 +3,7 @@ checkAuth();
 const { createApp, ref, computed, onMounted } = Vue;
 const PRINT_QUEUE_KEY = "sydroo_order_print_queue_v1";
 const PRINT_PAGE_VERSION = "20260428-0235";
+const NEW_CATEGORY_VALUE = "__new_category__";
 
 const getVantApi = () => window.vant || {};
 
@@ -64,6 +65,7 @@ createApp({
     const users = ref([]);
     const userTotal = ref(0);
     const userKeyword = ref("");
+    const userToolsOpen = ref(false);
     const zeroSpendCollapsed = ref(true);
     const selectedUserDetail = ref(null);
     const userDetailLoading = ref(false);
@@ -146,6 +148,16 @@ createApp({
       return text.length > length ? `${text.slice(0, length)}...` : text;
     };
 
+    const middleText = (value, length = 10) => {
+      const text = String(value || "").trim() || "未填写昵称";
+      const chars = Array.from(text);
+      if (chars.length <= length) return text;
+      const remaining = Math.max(length - 3, 2);
+      const headLength = Math.ceil(remaining / 2);
+      const tailLength = Math.floor(remaining / 2);
+      return `${chars.slice(0, headLength).join("")}...${chars.slice(-tailLength).join("")}`;
+    };
+
     const formatCell = (user, key) => {
       const value = user[key];
       if (key === "id") return formatUserId(value);
@@ -162,6 +174,7 @@ createApp({
     };
 
     const avatarText = (user) => shortText(user.nickname || user.public_uid || user.id || "U", 1).toUpperCase();
+    const compactUserName = (user) => middleText(user?.nickname || "未填写昵称", 10);
 
     const sortedUsers = computed(() => [...users.value].sort((a, b) => {
       const amountDiff = totalSpentNumber(b) - totalSpentNumber(a);
@@ -179,6 +192,14 @@ createApp({
 
     const toggleZeroSpendUsers = () => {
       zeroSpendCollapsed.value = !zeroSpendCollapsed.value;
+    };
+
+    const openUserTools = () => {
+      userToolsOpen.value = true;
+    };
+
+    const closeUserTools = () => {
+      userToolsOpen.value = false;
     };
 
     const openUserDetail = async (user) => {
@@ -221,6 +242,7 @@ createApp({
       categories.value.forEach((item) => map.set(Number(item.id), item));
       return map;
     });
+    const hasSnackCategory = computed(() => categories.value.some((category) => category.name === "小食"));
 
     const dishCountsByCategory = computed(() => {
       const map = new Map();
@@ -458,9 +480,19 @@ createApp({
       }
     };
 
-    const resetUserSearch = () => {
+    const resetUserSearch = async () => {
       userKeyword.value = "";
-      loadUsers();
+      await loadUsers();
+    };
+
+    const applyUserTools = async () => {
+      await loadUsers();
+      closeUserTools();
+    };
+
+    const resetUserTools = async () => {
+      await resetUserSearch();
+      closeUserTools();
     };
 
     const buildOrderParams = () => {
@@ -725,7 +757,7 @@ createApp({
     const submitCategory = async () => {
       const form = categoryEditor.value;
       if (!form.name.trim()) {
-        showToast("请填写分类名称");
+        showToast("请填写栏目名称");
         return;
       }
       const payload = {
@@ -733,17 +765,27 @@ createApp({
         sort_order: Number(form.sort_order || 0),
         is_active: Boolean(form.is_active),
       };
+      const isCreate = form.mode !== "edit";
       try {
+        let savedCategory = null;
         if (form.mode === "edit") {
-          await api.updateCategory(form.id, payload);
+          savedCategory = await api.updateCategory(form.id, payload);
         } else {
-          await api.createCategory(payload);
+          savedCategory = await api.createCategory(payload);
         }
         closeCategoryEditor();
-        showToast("分类已保存");
+        showToast("栏目已保存");
         await loadMenu();
+        if (isCreate && dishEditor.value.open) {
+          const createdCategory = categories.value.find((category) => (
+            Number(category.id) === Number(savedCategory?.id) || category.name === payload.name
+          ));
+          if (createdCategory) {
+            dishEditor.value.category_id = createdCategory.id;
+          }
+        }
       } catch (error) {
-        showToast(error.message || "分类保存失败");
+        showToast(error.message || "栏目保存失败");
       }
     };
 
@@ -793,6 +835,12 @@ createApp({
             is_sold_out: Boolean(dish.is_sold_out),
           }
         : emptyDishForm();
+    };
+
+    const handleDishCategoryChange = () => {
+      if (dishEditor.value.category_id !== NEW_CATEGORY_VALUE) return;
+      dishEditor.value.category_id = categories.value[0]?.id || null;
+      openCategoryEditor();
     };
 
     const closeDishEditor = () => {
@@ -896,6 +944,7 @@ createApp({
 
     return {
       activeTab,
+      NEW_CATEGORY_VALUE,
       navMenuOpen,
       loading,
       adminMeta,
@@ -909,6 +958,7 @@ createApp({
       zeroSpendCollapsed,
       userTotal,
       userKeyword,
+      userToolsOpen,
       selectedUserDetail,
       userDetailLoading,
       orderLoading,
@@ -937,6 +987,7 @@ createApp({
       categoryEditor,
       dishEditor,
       categoryMap,
+      hasSnackCategory,
       dishCountsByCategory,
       filteredDishes,
       menuSummary,
@@ -946,6 +997,10 @@ createApp({
       openTabFromMenu,
       loadUsers,
       resetUserSearch,
+      applyUserTools,
+      resetUserTools,
+      openUserTools,
+      closeUserTools,
       toggleZeroSpendUsers,
       openUserDetail,
       closeUserDetail,
@@ -972,6 +1027,7 @@ createApp({
       submitCategory,
       deleteCategory,
       openDishEditor,
+      handleDishCategoryChange,
       closeDishEditor,
       submitDish,
       patchDish,
@@ -984,6 +1040,8 @@ createApp({
       money,
       formatTime,
       shortText,
+      middleText,
+      compactUserName,
       formatCell,
       formatUserId,
       avatarText,

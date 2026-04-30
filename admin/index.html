@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜商家后台 v1.7</title>
+  <title>赛杜商家后台 v1.8</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0170">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0180">
 </head>
 <body>
   <div id="app" class="admin-shell">
@@ -13,7 +13,7 @@
       <header class="topbar">
         <div class="topbar-copy">
           <div class="top-brand">
-            <div class="top-brand-title">赛杜后台 v1.7</div>
+            <div class="top-brand-title">赛杜后台 v1.8</div>
             <div class="top-brand-subtitle">商家后台</div>
           </div>
           <div>
@@ -86,30 +86,16 @@
           </div>
         </div>
 
-        <div class="panel">
-          <div class="toolbar">
-            <label class="field">
-              <span class="field-label">搜索用户</span>
-              <input class="input" v-model.trim="userKeyword" type="text" placeholder="昵称 / public_uid / phone / invite_code" @keyup.enter="loadUsers">
-            </label>
-            <div></div>
-            <div></div>
-            <div></div>
-            <div class="row-actions">
-              <button class="button" type="button" :disabled="userLoading" @click="loadUsers">{{ userLoading ? '加载中' : '查询' }}</button>
-              <button class="button secondary" type="button" @click="resetUserSearch">重置</button>
-            </div>
-          </div>
-
-          <div class="user-filter-note" v-if="zeroSpendUsers.length">
+        <div class="panel user-list-panel">
+          <div class="panel-head user-list-head">
             <div>
-              <div class="strong">{{ isUserSearching ? '搜索结果已展示全部匹配用户' : '已按累计消费降序排列' }}</div>
-              <div class="muted" v-if="isUserSearching">搜索时不会折叠 0 消费用户，保证能查到用户信息。</div>
-              <div class="muted" v-else>0 消费用户默认折叠，当前{{ zeroSpendCollapsed ? '隐藏' : '展开' }} {{ zeroSpendUsers.length }} 位。</div>
+              <h2 class="panel-title">用户列表</h2>
+              <div class="panel-note">{{ isUserSearching ? `搜索：${userKeyword}` : '按累计消费降序排列' }}</div>
             </div>
-            <button v-if="!isUserSearching" class="button small secondary" type="button" @click="toggleZeroSpendUsers">
-              {{ zeroSpendCollapsed ? '展开0消费用户' : '折叠0消费用户' }}
-            </button>
+            <div class="row-actions user-list-actions">
+              <span class="tag">{{ visibleUsers.length }} / {{ userTotal }}</span>
+              <button class="button small secondary" type="button" @click="openUserTools">筛选/显示</button>
+            </div>
           </div>
 
           <div class="table-wrap" v-if="visibleUsers.length">
@@ -125,16 +111,18 @@
               </thead>
               <tbody>
                 <tr v-for="user in visibleUsers" :key="user.id" :class="{ 'zero-spend-row': Number(user.total_spent || 0) <= 0 }">
-                  <td>
+                  <td class="avatar-cell">
                     <div class="avatar" :class="{ member: user.is_member }">
                       <img v-if="user.avatar_url" :src="user.avatar_url" alt="">
                       <span v-else>{{ avatarText(user) }}</span>
                     </div>
                   </td>
-                  <td class="mono strong">{{ formatUserId(user.id) }}</td>
-                  <td class="user-name-cell">{{ user.nickname || '未填写昵称' }}</td>
-                  <td class="strong">{{ money(user.total_spent) }}</td>
-                  <td>
+                  <td class="mono strong user-id-cell"><span class="user-ledger-value">{{ formatUserId(user.id) }}</span></td>
+                  <td class="user-name-cell">
+                    <span class="user-name-display" :title="user.nickname || '未填写昵称'">{{ compactUserName(user) }}</span>
+                  </td>
+                  <td class="strong user-spend-cell"><span class="user-money-value">{{ money(user.total_spent) }}</span></td>
+                  <td class="user-action-cell">
                     <button class="button small secondary" type="button" @click="openUserDetail(user)">更多</button>
                   </td>
                 </tr>
@@ -279,69 +267,72 @@
           </div>
         </div>
 
-        <div class="split">
-          <aside class="panel">
-            <div class="panel-head">
-              <div>
-                <h2 class="panel-title">分类</h2>
-                <div class="panel-note">分类删除会受后端保护：有菜品时无法删除。</div>
-              </div>
-              <button class="button small" type="button" @click="openCategoryEditor()">新增</button>
+        <section class="panel menu-dish-panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">菜品</h2>
+              <div class="panel-note">当前显示 {{ filteredDishes.length }} 款。分类在编辑菜品时选择，需要新栏目可在分类下拉中进入新增栏目。</div>
             </div>
-            <div class="category-list">
-              <button class="category-button" :class="{ active: selectedCategoryId === 'all' }" type="button" @click="selectedCategoryId = 'all'">
-                <span class="strong">全部分类</span>
-                <div class="muted">{{ dishes.length }} 款菜品</div>
-              </button>
-              <div v-for="category in categories" :key="category.id">
-                <button class="category-button" :class="{ active: Number(selectedCategoryId) === Number(category.id) }" type="button" @click="selectedCategoryId = category.id">
-                  <span class="strong">{{ category.name }}</span>
-                  <div class="muted">排序 {{ category.sort_order }} · {{ dishCountsByCategory.get(Number(category.id)) || 0 }} 款 · {{ category.is_active ? '启用' : '停用' }}</div>
-                </button>
-                <div class="row-actions" style="justify-content: flex-start; margin: 6px 0 10px;">
-                  <button class="button small secondary" type="button" @click="openCategoryEditor(category)">编辑</button>
-                  <button class="button small danger" type="button" @click="deleteCategory(category)">删除</button>
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h2 class="panel-title">菜品</h2>
-                <div class="panel-note">当前显示 {{ filteredDishes.length }} 款。上下架、售罄、删除都会立即走后端接口。</div>
-              </div>
-            </div>
-            <div class="dish-grid" v-if="filteredDishes.length">
-              <article class="dish-card" v-for="dish in filteredDishes" :key="dish.id">
-                <div class="dish-body">
-                  <img class="dish-image" :src="dish.image_url || 'https://dummyimage.com/184x184/f3eee3/736d61&text=Dish'" alt="">
-                  <div>
-                    <div class="strong">{{ dish.name }}</div>
-                    <div class="muted">{{ categoryName(dish.category_id) }} · 排序 {{ dish.sort_order }}</div>
-                    <div style="margin: 8px 0; font-size: 20px; font-weight: 950;">{{ money(dish.price) }}</div>
-                    <div class="muted">{{ dish.description || '未填写简介' }}</div>
-                    <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
-                      <span class="tag" :class="dish.is_active ? 'success' : 'danger'">{{ dish.is_active ? '上架' : '下架' }}</span>
-                      <span class="tag warning" v-if="dish.is_sold_out">售罄</span>
-                      <span class="tag">库存 {{ dish.stock === -1 ? '不限' : dish.stock }}</span>
-                    </div>
+          </div>
+          <div class="dish-grid" v-if="filteredDishes.length">
+            <article class="dish-card" v-for="dish in filteredDishes" :key="dish.id">
+              <div class="dish-body">
+                <img class="dish-image" :src="dish.image_url || 'https://dummyimage.com/184x184/f3eee3/736d61&text=Dish'" alt="">
+                <div>
+                  <div class="strong">{{ dish.name }}</div>
+                  <div class="muted">{{ categoryName(dish.category_id) }} · 排序 {{ dish.sort_order }}</div>
+                  <div style="margin: 8px 0; font-size: 20px; font-weight: 950;">{{ money(dish.price) }}</div>
+                  <div class="muted">{{ dish.description || '未填写简介' }}</div>
+                  <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="tag" :class="dish.is_active ? 'success' : 'danger'">{{ dish.is_active ? '上架' : '下架' }}</span>
+                    <span class="tag warning" v-if="dish.is_sold_out">售罄</span>
+                    <span class="tag">库存 {{ dish.stock === -1 ? '不限' : dish.stock }}</span>
                   </div>
                 </div>
-                <div class="dish-actions">
-                  <button class="button small secondary" type="button" @click="openDishEditor(dish)">编辑</button>
-                  <button class="button small" type="button" @click="patchDish(dish, { is_active: !dish.is_active }, dish.is_active ? '已下架' : '已上架')">{{ dish.is_active ? '下架' : '上架' }}</button>
-                  <button class="button small warn" type="button" @click="patchDish(dish, { is_sold_out: !dish.is_sold_out }, dish.is_sold_out ? '已恢复售卖' : '已标记售罄')">{{ dish.is_sold_out ? '恢复' : '售罄' }}</button>
-                  <button class="button small danger" type="button" @click="deleteDish(dish)">删除</button>
-                </div>
-              </article>
-            </div>
-            <div v-else class="empty">当前分类或搜索条件下没有菜品。</div>
-          </section>
-        </div>
+              </div>
+              <div class="dish-actions">
+                <button class="button small secondary" type="button" @click="openDishEditor(dish)">编辑</button>
+                <button class="button small" type="button" @click="patchDish(dish, { is_active: !dish.is_active }, dish.is_active ? '已下架' : '已上架')">{{ dish.is_active ? '下架' : '上架' }}</button>
+                <button class="button small warn" type="button" @click="patchDish(dish, { is_sold_out: !dish.is_sold_out }, dish.is_sold_out ? '已恢复售卖' : '已标记售罄')">{{ dish.is_sold_out ? '恢复' : '售罄' }}</button>
+                <button class="button small danger" type="button" @click="deleteDish(dish)">删除</button>
+              </div>
+            </article>
+          </div>
+          <div v-else class="empty">当前分类或搜索条件下没有菜品。</div>
+        </section>
       </section>
     </main>
+
+    <div class="modal-backdrop" v-if="userToolsOpen" @click.self="closeUserTools">
+      <article class="modal small">
+        <div class="modal-head">
+          <h2 class="modal-title">用户筛选与显示</h2>
+          <button class="button ghost" type="button" @click="closeUserTools">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="user-tools-panel">
+            <label class="field">
+              <span class="field-label">搜索用户</span>
+              <input class="input" v-model.trim="userKeyword" type="text" placeholder="昵称 / public_uid / phone / invite_code" @keyup.enter="applyUserTools">
+            </label>
+            <div class="user-filter-note" v-if="zeroSpendUsers.length">
+              <div>
+                <div class="strong">{{ isUserSearching ? '搜索结果已展示全部匹配用户' : '已按累计消费降序排列' }}</div>
+                <div class="muted" v-if="isUserSearching">搜索时不会折叠 0 消费用户，保证能查到用户信息。</div>
+                <div class="muted" v-else>0 消费用户默认折叠，当前{{ zeroSpendCollapsed ? '隐藏' : '展开' }} {{ zeroSpendUsers.length }} 位。</div>
+              </div>
+              <button v-if="!isUserSearching" class="button small secondary" type="button" @click="toggleZeroSpendUsers">
+                {{ zeroSpendCollapsed ? '展开0消费用户' : '折叠0消费用户' }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="button secondary" type="button" :disabled="userLoading" @click="resetUserTools">重置</button>
+          <button class="button" type="button" :disabled="userLoading" @click="applyUserTools">{{ userLoading ? '查询中' : '查询' }}</button>
+        </div>
+      </article>
+    </div>
 
     <div class="modal-backdrop" v-if="selectedUserDetail" @click.self="closeUserDetail">
       <article class="modal small">
@@ -501,16 +492,16 @@
       </article>
     </div>
 
-    <div class="modal-backdrop" v-if="categoryEditor.open" @click.self="closeCategoryEditor">
+    <div class="modal-backdrop modal-backdrop-top" v-if="categoryEditor.open" @click.self="closeCategoryEditor">
       <article class="modal small">
         <div class="modal-head">
-          <h2 class="modal-title">{{ categoryEditor.mode === 'edit' ? '编辑分类' : '新增分类' }}</h2>
+          <h2 class="modal-title">{{ categoryEditor.mode === 'edit' ? '编辑栏目' : '新增栏目' }}</h2>
           <button class="button ghost" type="button" @click="closeCategoryEditor">关闭</button>
         </div>
         <div class="modal-body">
           <div class="form-grid">
             <label class="field wide">
-              <span class="field-label">分类名称</span>
+              <span class="field-label">栏目名称</span>
               <input class="input" v-model.trim="categoryEditor.name" type="text">
             </label>
             <label class="field">
@@ -525,7 +516,7 @@
         </div>
         <div class="modal-foot">
           <button class="button secondary" type="button" @click="closeCategoryEditor">取消</button>
-          <button class="button" type="button" @click="submitCategory">保存分类</button>
+          <button class="button" type="button" @click="submitCategory">保存栏目</button>
         </div>
       </article>
     </div>
@@ -544,8 +535,12 @@
             </label>
             <label class="field">
               <span class="field-label">分类</span>
-              <select class="select" v-model="dishEditor.category_id">
-                <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
+              <select class="select" v-model="dishEditor.category_id" @change="handleDishCategoryChange">
+                <template v-for="category in categories" :key="category.id">
+                  <option :value="category.id">{{ category.name }}</option>
+                  <option v-if="category.name === '小食'" :value="NEW_CATEGORY_VALUE">新增栏目</option>
+                </template>
+                <option v-if="!hasSnackCategory" :value="NEW_CATEGORY_VALUE">新增栏目</option>
               </select>
             </label>
             <label class="field">
@@ -595,6 +590,6 @@
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0170"></script>
+  <script src="js/workbench.js?v=20260501-0180"></script>
 </body>
 </html>
