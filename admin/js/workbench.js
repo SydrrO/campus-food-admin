@@ -76,6 +76,10 @@ createApp({
     const orderDetailOpen = ref(false);
     const manualRefundingOrderNo = ref("");
     const refundConfirm = ref({ open: false, order: null, message: "", error: "" });
+    const deliverySummaryOpen = ref(false);
+    const deliverySummaryLoading = ref(false);
+    const deliverySummaryOrders = ref([]);
+    const deliverySummaryNote = ref("");
 
     const menuLoading = ref(false);
     const categories = ref([]);
@@ -246,6 +250,59 @@ createApp({
 
     const canPrintOrder = (order) => printableOrderStatuses.has(order?.status);
 
+    const normalizeAddress = (address) => String(address || "")
+      .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const deliveryArea = (address) => {
+      const text = normalizeAddress(address);
+      if (!text) return "未填写地址";
+
+      const compact = text.replace(/(宿舍|公寓|寝室|楼栋|号楼|楼|栋|幢|座)/g, "");
+      const direct = compact.match(/(男|女|书|研|教|东|西|南|北|新|老)(?:生|宿舍|宿|舍|区|公寓)?\s*([0-9]{1,3}[A-Za-z]?)(?=$|[^0-9A-Za-z]|宿舍|公寓)/);
+      if (direct) return `${direct[1]}${direct[2]}`;
+
+      const building = text.match(/([\u4e00-\u9fa5A-Za-z]{1,6}[0-9]{1,3}[A-Za-z]?)(?:栋|号楼|楼|舍|宿舍|公寓|幢|座)?/);
+      if (building) return building[1].replace(/(宿舍|公寓|寝室|楼栋|号楼|楼|栋|幢|座)$/g, "");
+
+      const firstChunk = text.split(/[，,。、；;|/\\-]/)[0];
+      return firstChunk.slice(0, 8) || "未填写地址";
+    };
+
+    const deliverySummaryRows = computed(() => {
+      const map = new Map();
+      deliverySummaryOrders.value.forEach((order) => {
+        const area = deliveryArea(order.delivery_address);
+        const current = map.get(area) || { area, count: 0, samples: [] };
+        current.count += 1;
+        if (order.delivery_address && current.samples.length < 2 && !current.samples.includes(order.delivery_address)) {
+          current.samples.push(order.delivery_address);
+        }
+        map.set(area, current);
+      });
+
+      return Array.from(map.values())
+        .map((row) => ({
+          ...row,
+          sample: row.samples.length ? row.samples.join(" / ") : "未填写具体地址",
+        }))
+        .sort((a, b) => b.count - a.count || a.area.localeCompare(b.area, "zh-Hans-CN", { numeric: true }));
+    });
+
+    const deliverySummaryTotal = computed(() => deliverySummaryRows.value.reduce((sum, row) => sum + row.count, 0));
+
+    const deliverySummaryFilterText = computed(() => {
+      const filters = orderFilters.value;
+      const parts = [
+        filters.delivery_date || "全部日期",
+        filters.meal_type ? mealLabel(filters.meal_type) : "全部餐别",
+        filters.status ? statusLabel(filters.status) : "全部状态",
+      ];
+      if (filters.keyword) parts.push(`关键词：${filters.keyword}`);
+      return parts.join(" · ");
+    });
+
     const parseItemSummary = (summary) => {
       if (!summary) return [];
       return String(summary)
@@ -385,6 +442,43 @@ createApp({
       } finally {
         if (!silent) orderLoading.value = false;
       }
+    };
+
+    const openDeliverySummary = async () => {
+      deliverySummaryOpen.value = true;
+      deliverySummaryLoading.value = true;
+      deliverySummaryNote.value = "";
+
+      try {
+        const baseParams = { ...buildOrderParams(), page_size: 100 };
+        const allOrders = [];
+        let page = 1;
+        let total = 0;
+
+        do {
+          const result = await api.getOrderMonitor({ ...baseParams, page });
+          const items = result.items || [];
+          total = Number(result.total || items.length || 0);
+          allOrders.push(...items);
+          page += 1;
+          if (!items.length) break;
+        } while (allOrders.length < total && page <= 50);
+
+        deliverySummaryOrders.value = allOrders;
+        if (total > allOrders.length) {
+          deliverySummaryNote.value = `当前统计已读取 ${allOrders.length} / ${total} 单，后续页未继续拉取。`;
+        }
+      } catch (error) {
+        deliverySummaryOrders.value = orders.value;
+        deliverySummaryNote.value = "完整配送详情读取失败，当前展示页面已加载订单的统计。";
+        showToast(error.message || "配送详情加载失败");
+      } finally {
+        deliverySummaryLoading.value = false;
+      }
+    };
+
+    const closeDeliverySummary = () => {
+      deliverySummaryOpen.value = false;
     };
 
     const resetOrderFilters = () => {
@@ -779,6 +873,12 @@ createApp({
       orderDetailOpen,
       manualRefundingOrderNo,
       refundConfirm,
+      deliverySummaryOpen,
+      deliverySummaryLoading,
+      deliverySummaryRows,
+      deliverySummaryTotal,
+      deliverySummaryFilterText,
+      deliverySummaryNote,
       orderGroups,
       orderSummary,
       menuLoading,
@@ -799,6 +899,8 @@ createApp({
       closeUserDetail,
       loadOrders,
       resetOrderFilters,
+      openDeliverySummary,
+      closeDeliverySummary,
       copyMerchantReceipt,
       openOrder,
       markOrder,

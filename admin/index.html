@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜商家后台 v1</title>
+  <title>赛杜商家后台 v1.1</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0058">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0110">
 </head>
 <body>
   <div id="app" class="admin-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-title">赛杜后台 v1</div>
+        <div class="brand-title">赛杜后台 v1.1</div>
         <div class="brand-subtitle">只保留用户、订单、菜单。每个按钮都对应真实接口。</div>
       </div>
 
@@ -45,7 +45,12 @@
       <header class="topbar">
         <div>
           <h1 class="page-title" v-if="activeTab === 'users'">用户数据</h1>
-          <h1 class="page-title" v-if="activeTab === 'orders'">订单处理</h1>
+          <div class="page-title-row" v-if="activeTab === 'orders'">
+            <h1 class="page-title">订单处理</h1>
+            <button class="button secondary" type="button" :disabled="deliverySummaryLoading || orderLoading" @click="openDeliverySummary">
+              {{ deliverySummaryLoading ? '统计中' : '配送详情' }}
+            </button>
+          </div>
           <h1 class="page-title" v-if="activeTab === 'menu'">菜单数据</h1>
           <div class="page-note" v-if="activeTab === 'users'">用户列表保留常用字段，更多资料从行尾按钮打开，手机上也能快速扫用户和消费情况。</div>
           <div class="page-note" v-if="activeTab === 'orders'">订单按状态归类展示，列表直接显示“谁点了什么”，详情和列表共用同一套后端数据，状态变更后会自动同步。</div>
@@ -423,6 +428,44 @@
       </article>
     </div>
 
+    <div class="modal-backdrop" v-if="deliverySummaryOpen" @click.self="closeDeliverySummary">
+      <article class="modal small">
+        <div class="modal-head">
+          <h2 class="modal-title">配送详情</h2>
+          <button class="button ghost" type="button" @click="closeDeliverySummary">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="panel-note">当前筛选：{{ deliverySummaryFilterText }}</div>
+          <div class="delivery-total">
+            <div>
+              <div class="strong">{{ deliverySummaryTotal }} 单</div>
+              <div class="muted">{{ deliverySummaryRows.length }} 个配送区域</div>
+            </div>
+            <button class="button small secondary" type="button" :disabled="deliverySummaryLoading" @click="openDeliverySummary">
+              {{ deliverySummaryLoading ? '统计中' : '刷新' }}
+            </button>
+          </div>
+
+          <div class="empty" v-if="deliverySummaryLoading">正在统计配送区域...</div>
+          <div class="empty" v-else-if="!deliverySummaryRows.length">当前筛选下暂无订单</div>
+          <div class="delivery-summary-list" v-else>
+            <div class="delivery-summary-row" v-for="row in deliverySummaryRows" :key="row.area">
+              <div>
+                <div class="strong">{{ row.area }}</div>
+                <div class="muted">{{ row.sample }}</div>
+              </div>
+              <span class="tag primary">{{ row.count }} 单</span>
+            </div>
+          </div>
+
+          <div class="panel-note" v-if="deliverySummaryNote">{{ deliverySummaryNote }}</div>
+        </div>
+        <div class="modal-foot">
+          <button class="button secondary" type="button" @click="closeDeliverySummary">关闭</button>
+        </div>
+      </article>
+    </div>
+
     <div class="modal-backdrop" v-if="refundConfirm.open && refundConfirm.order" @click.self="closeRefundConfirm">
       <article class="modal small">
         <div class="modal-head">
@@ -543,6 +586,6 @@
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0058"></script>
+  <script src="js/workbench.js?v=20260501-0110"></script>
 </body>
 </html>
