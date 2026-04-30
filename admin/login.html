@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台登录</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
+    <style>
+        :root {
+            --bg: #eef3ea;
+            --panel: #ffffff;
+            --ink: #1f2a1f;
+            --muted: #5f6d5f;
+            --line: #dde6d8;
+            --shadow: 0 18px 40px rgba(31, 42, 31, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #f6f8f1 0%, var(--bg) 100%);
+            color: var(--ink);
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+        .login-box {
+            width: 100%;
+            max-width: 430px;
+            padding: 28px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: var(--shadow);
+        }
+        .login-title {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="page">
+        <div class="login-box">
+            <h1 class="login-title">赛杜甄选商家后台</h1>
+
+            <form @submit.prevent="handleSubmit" style="margin-top: 22px;">
+                <van-cell-group inset>
+                    <van-field
+                        v-model.trim="username"
+                        label="用户名"
+                        placeholder="请输入管理员用户名"
+                        autocomplete="username"
+                        clearable
+                        required
+                    ></van-field>
+                    <van-field
+                        v-model="password"
+                        type="password"
+                        label="密码"
+                        placeholder="请输入管理员密码"
+                        autocomplete="current-password"
+                        clearable
+                        required
+                    ></van-field>
+                </van-cell-group>
+
+                <div style="margin: 18px 0 0;">
+                    <van-button
+                        round
+                        block
+                        type="primary"
+                        native-type="submit"
+                        :loading="submitting"
+                        loading-text="登录中..."
+                    >
+                        登录后台
+                    </van-button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vant@3/lib/vant.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260428-0205"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const { createApp, ref } = Vue;
+
+        createApp({
+            setup() {
+                const { showToast } = vant;
+                const username = ref('');
+                const password = ref('');
+                const submitting = ref(false);
+                const getRedirectTarget = () => {
+                    const redirect = new URLSearchParams(window.location.search).get('redirect');
+                    if (!redirect) {
+                        return 'index.html';
+                    }
+                    const target = redirect.trim();
+                    if (
+                        !target ||
+                        target.includes('\\') ||
+                        target.startsWith('//') ||
+                        /^https?:\/\//i.test(target) ||
+                        target.split('?')[0].endsWith('login.html')
+                    ) {
+                        return 'index.html';
+                    }
+                    return target;
+                };
+
+                const handleSubmit = async () => {
+                    if (submitting.value) {
+                        return;
+                    }
+
+                    if (!username.value || !password.value) {
+                        showToast('请输入用户名和密码');
+                        return;
+                    }
+
+                    submitting.value = true;
+
+                    try {
+                        await api.adminLogin(username.value, password.value);
+                        window.location.replace(getRedirectTarget());
+                    } catch (error) {
+                        showToast(error.message || '登录失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+
+                return {
+                    username,
+                    password,
+                    submitting,
+                    handleSubmit
+                };
+            }
+        }).use(vant).mount('#app');
+    </script>
+</body>
+</html>

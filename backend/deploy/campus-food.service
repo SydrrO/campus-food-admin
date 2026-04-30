@@ -1,0 +1,18 @@
+[Unit]
+Description=Campus Food Backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/campus-food/backend
+Environment="DATABASE_URL_OVERRIDE=sqlite:////opt/campus-food/data/campus_food.db"
+Environment="WECHAT_PAY_MODE=mock"
+ExecStart=/opt/campus-food/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=append:/opt/campus-food/logs/backend.log
+StandardError=append:/opt/campus-food/logs/backend-error.log
+
+[Install]
+WantedBy=multi-user.target

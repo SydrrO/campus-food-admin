@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理员登录 - 校内订餐系统</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@4/lib/index.css">
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px;
+      width: 400px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    .login-title {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-title">管理员登录</div>
+    <van-form id="loginForm">
+      <van-cell-group inset>
+        <van-field
+          name="username"
+          label="用户名"
+          placeholder="请输入用户名"
+          required
+        />
+        <van-field
+          name="password"
+          type="password"
+          label="密码"
+          placeholder="请输入密码"
+          required
+        />
+      </van-cell-group>
+      <div style="margin: 24px 16px;">
+        <van-button round block type="primary" native-type="submit">登录</van-button>
+      </div>
+    </van-form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vant@4/lib/vant.min.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    const { createApp } = Vue
+    
+    createApp({
+      setup() {
+        const onSubmit = async (values) => {
+          vant.showLoadingToast({ message: '登录中...', forbidClick: true })
+          
+          try {
+            const data = await api.adminLogin(values.username, values.password)
+            localStorage.setItem('admin_token', data.token)
+            vant.showSuccessToast('登录成功')
+            setTimeout(() => {
+              window.location.href = './dashboard.html'
+            }, 1000)
+          } catch (error) {
+            vant.closeToast()
+          }
+        }
+        
+        return { onSubmit }
+      }
+    }).use(vant).mount('#loginForm')
+  </script>
+</body>
+</html>

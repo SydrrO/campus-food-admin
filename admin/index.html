@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>赛杜商家后台</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
+  <link rel="stylesheet" href="css/workbench.css?v=20260428-0124">
+</head>
+<body>
+  <div id="app" class="admin-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-title">赛杜后台</div>
+        <div class="brand-subtitle">只保留用户、订单、菜单。每个按钮都对应真实接口。</div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-button" :class="{ active: activeTab === 'users' }" type="button" @click="setTab('users')">
+          <span class="nav-title">用户</span>
+          <span class="nav-desc">查看数据库 users 表所有字段</span>
+        </button>
+        <button class="nav-button" :class="{ active: activeTab === 'orders' }" type="button" @click="setTab('orders')">
+          <span class="nav-title">订单</span>
+          <span class="nav-desc">按状态归类、看明细、打印小票</span>
+        </button>
+        <button class="nav-button" :class="{ active: activeTab === 'menu' }" type="button" @click="setTab('menu')">
+          <span class="nav-title">菜单</span>
+          <span class="nav-desc">维护分类与菜品增删改</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div>环境：{{ adminMeta.env }}</div>
+        <div>支付：{{ adminMeta.mode }}</div>
+        <button class="button secondary" type="button" @click="logoutAdmin">退出登录</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title" v-if="activeTab === 'users'">用户数据</h1>
+          <h1 class="page-title" v-if="activeTab === 'orders'">订单处理</h1>
+          <h1 class="page-title" v-if="activeTab === 'menu'">菜单数据</h1>
+          <div class="page-note" v-if="activeTab === 'users'">这里不再只展示“会员摘要”，而是直接列出 users 表全部字段，方便排查账号、openid、头像、注册状态和积分。</div>
+          <div class="page-note" v-if="activeTab === 'orders'">订单按状态归类展示，列表直接显示“谁点了什么”，详情和列表共用同一套后端数据，状态变更后会自动同步。</div>
+          <div class="page-note" v-if="activeTab === 'menu'">菜单页只保留真实可用操作：分类新增/编辑/删除，菜品新增/编辑/上下架/售罄/删除。</div>
+        </div>
+        <div class="top-actions">
+          <span class="pill">API：{{ API_BASE_URL }}</span>
+          <span class="pill">刷新：{{ adminMeta.updatedAt || '-' }}</span>
+          <button class="button secondary" type="button" @click="loadMeta">刷新环境</button>
+        </div>
+      </header>
+
+      <section v-show="activeTab === 'users'">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">用户总数</div>
+            <div class="stat-value">{{ userTotal }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">已注册</div>
+            <div class="stat-value">{{ users.filter(user => user.is_registered).length }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">会员</div>
+            <div class="stat-value">{{ users.filter(user => user.is_member).length }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">有头像</div>
+            <div class="stat-value">{{ users.filter(user => user.avatar_url).length }}</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="toolbar">
+            <label class="field">
+              <span class="field-label">搜索用户</span>
+              <input class="input" v-model.trim="userKeyword" type="text" placeholder="昵称 / public_uid / phone / invite_code" @keyup.enter="loadUsers">
+            </label>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div class="row-actions">
+              <button class="button" type="button" :disabled="userLoading" @click="loadUsers">{{ userLoading ? '加载中' : '查询' }}</button>
+              <button class="button secondary" type="button" @click="resetUserSearch">重置</button>
+            </div>
+          </div>
+
+          <div class="table-wrap" v-if="users.length">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>头像</th>
+                  <th v-for="key in userColumns" :key="key">{{ userColumnLabel(key) }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="user in users" :key="user.id">
+                  <td>
+                    <div class="avatar">
+                      <img v-if="user.avatar_url" :src="user.avatar_url" alt="">
+                      <span v-else>{{ avatarText(user) }}</span>
+                    </div>
+                  </td>
+                  <td v-for="key in userColumns" :key="`${user.id}-${key}`" :class="{ mono: ['openid', 'public_uid', 'avatar_url'].includes(key) }">
+                    {{ key === 'avatar_url' || key === 'openid' ? shortText(formatCell(user, key), 46) : formatCell(user, key) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="empty">当前没有用户数据。</div>
+        </div>
+      </section>
+
+      <section v-show="activeTab === 'orders'">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">当前结果</div>
+            <div class="stat-value">{{ orderSummary.total }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">待支付</div>
+            <div class="stat-value">{{ orderSummary.unpaid }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">已确认</div>
+            <div class="stat-value">{{ orderSummary.confirmed }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">处理中</div>
+            <div class="stat-value">{{ orderSummary.delivering }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">已关闭</div>
+            <div class="stat-value">{{ orderSummary.closed }}</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="toolbar order-toolbar">
+            <label class="field">
+              <span class="field-label">关键词</span>
+              <input class="input" v-model.trim="orderFilters.keyword" type="text" placeholder="订单号 / 姓名 / 手机 / 地址 / 备注" @keyup.enter="loadOrders">
+            </label>
+            <label class="field">
+              <span class="field-label">配送日期</span>
+              <input class="input" v-model="orderFilters.delivery_date" type="date">
+            </label>
+            <label class="field">
+              <span class="field-label">餐别</span>
+              <select class="select" v-model="orderFilters.meal_type">
+                <option value="">全部</option>
+                <option value="lunch">午餐</option>
+                <option value="dinner">晚餐</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">状态</span>
+              <select class="select" v-model="orderFilters.status">
+                <option value="">全部</option>
+                <option value="unpaid">待支付</option>
+                <option value="confirmed">已确认</option>
+                <option value="delivering">处理中</option>
+                <option value="completed">已完成</option>
+                <option value="refunded">已退款</option>
+                <option value="closed">已关闭（含退款）</option>
+              </select>
+            </label>
+            <div class="toolbar-actions">
+              <button class="button" type="button" :disabled="orderLoading" @click="loadOrders">{{ orderLoading ? '加载中' : '查询' }}</button>
+              <button class="button secondary" type="button" @click="resetOrderFilters">重置</button>
+              <button class="button secondary" type="button" @click="copyMerchantReceipt('lunch')">复制午餐回执</button>
+              <button class="button secondary" type="button" @click="copyMerchantReceipt('dinner')">复制晚餐回执</button>
+              <button class="button secondary" type="button" @click="printFilteredOrders">批量打印当前结果</button>
+            </div>
+          </div>
+          <div class="panel-note">最近更新：{{ formatTime(orderLastUpdatedAt) }}</div>
+        </div>
+
+        <div class="order-groups" v-if="orderGroups.length">
+          <article class="order-group" v-for="group in orderGroups" :key="group.status">
+            <div class="group-head">
+              <div class="group-title">{{ group.label }}</div>
+              <span class="tag" :class="statusClass(group.status)">{{ group.items.length }} 单</span>
+            </div>
+            <div class="order-list">
+              <div class="order-row" v-for="order in group.items" :key="order.order_no">
+                <div class="order-main">
+                  <div class="strong">{{ order.contact_name }} / {{ order.contact_phone }}</div>
+                  <div class="muted mono">{{ order.order_no }}</div>
+                </div>
+                <div>
+                  <div class="strong">{{ mealLabel(order.meal_type) }} · {{ order.delivery_date }}</div>
+                  <div class="muted">{{ order.delivery_address }}</div>
+                </div>
+                <div>
+                  <div class="strong">{{ order.item_summary || '未读取到商品明细' }}</div>
+                  <div class="muted">共 {{ order.item_count || 0 }} 件 · 实付 {{ money(order.actual_amount) }} · 备注 {{ order.remark || '无' }}</div>
+                </div>
+                <div class="row-actions">
+                  <button class="button small secondary" type="button" @click="openOrder(order)">详情</button>
+                  <button class="button small success" v-if="order.status === 'confirmed'" type="button" @click="markOrder(order, 'delivering')">处理中</button>
+                  <button class="button small success" v-if="order.status === 'delivering'" type="button" @click="markOrder(order, 'completed')">完成</button>
+                  <button class="button small danger" v-if="canManualRefund(order)" type="button" :disabled="manualRefundingOrderNo === order.order_no" @click="manualRefund(order)">
+                    {{ manualRefundingOrderNo === order.order_no ? '退款中' : '手动退款' }}
+                  </button>
+                  <button class="button small secondary" v-if="canPrintOrder(order)" type="button" @click="printReceipt(order.order_no)">打印</button>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div v-else class="empty">当前筛选条件下没有订单。</div>
+      </section>
+
+      <section v-show="activeTab === 'menu'">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">分类</div>
+            <div class="stat-value">{{ menuSummary.categories }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">菜品</div>
+            <div class="stat-value">{{ menuSummary.dishes }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">上架</div>
+            <div class="stat-value">{{ menuSummary.active }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">售罄</div>
+            <div class="stat-value">{{ menuSummary.soldOut }}</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="toolbar menu-toolbar">
+            <label class="field">
+              <span class="field-label">搜索菜品</span>
+              <input class="input" v-model.trim="menuSearch" type="text" placeholder="菜品名 / 简介 / 详情">
+            </label>
+            <label class="field">
+              <span class="field-label">分类</span>
+              <select class="select" v-model="selectedCategoryId">
+                <option value="all">全部分类</option>
+                <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
+              </select>
+            </label>
+            <button class="button secondary" type="button" :disabled="menuLoading" @click="loadMenu">{{ menuLoading ? '加载中' : '刷新菜单' }}</button>
+            <button class="button" type="button" @click="openDishEditor()">新增菜品</button>
+          </div>
+        </div>
+
+        <div class="split">
+          <aside class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">分类</h2>
+                <div class="panel-note">分类删除会受后端保护：有菜品时无法删除。</div>
+              </div>
+              <button class="button small" type="button" @click="openCategoryEditor()">新增</button>
+            </div>
+            <div class="category-list">
+              <button class="category-button" :class="{ active: selectedCategoryId === 'all' }" type="button" @click="selectedCategoryId = 'all'">
+                <span class="strong">全部分类</span>
+                <div class="muted">{{ dishes.length }} 款菜品</div>
+              </button>
+              <div v-for="category in categories" :key="category.id">
+                <button class="category-button" :class="{ active: Number(selectedCategoryId) === Number(category.id) }" type="button" @click="selectedCategoryId = category.id">
+                  <span class="strong">{{ category.name }}</span>
+                  <div class="muted">排序 {{ category.sort_order }} · {{ dishCountsByCategory.get(Number(category.id)) || 0 }} 款 · {{ category.is_active ? '启用' : '停用' }}</div>
+                </button>
+                <div class="row-actions" style="justify-content: flex-start; margin: 6px 0 10px;">
+                  <button class="button small secondary" type="button" @click="openCategoryEditor(category)">编辑</button>
+                  <button class="button small danger" type="button" @click="deleteCategory(category)">删除</button>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">菜品</h2>
+                <div class="panel-note">当前显示 {{ filteredDishes.length }} 款。上下架、售罄、删除都会立即走后端接口。</div>
+              </div>
+            </div>
+            <div class="dish-grid" v-if="filteredDishes.length">
+              <article class="dish-card" v-for="dish in filteredDishes" :key="dish.id">
+                <div class="dish-body">
+                  <img class="dish-image" :src="dish.image_url || 'https://dummyimage.com/184x184/f3eee3/736d61&text=Dish'" alt="">
+                  <div>
+                    <div class="strong">{{ dish.name }}</div>
+                    <div class="muted">{{ categoryName(dish.category_id) }} · 排序 {{ dish.sort_order }}</div>
+                    <div style="margin: 8px 0; font-size: 20px; font-weight: 950;">{{ money(dish.price) }}</div>
+                    <div class="muted">{{ dish.description || '未填写简介' }}</div>
+                    <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
+                      <span class="tag" :class="dish.is_active ? 'success' : 'danger'">{{ dish.is_active ? '上架' : '下架' }}</span>
+                      <span class="tag warning" v-if="dish.is_sold_out">售罄</span>
+                      <span class="tag">库存 {{ dish.stock === -1 ? '不限' : dish.stock }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="dish-actions">
+                  <button class="button small secondary" type="button" @click="openDishEditor(dish)">编辑</button>
+                  <button class="button small" type="button" @click="patchDish(dish, { is_active: !dish.is_active }, dish.is_active ? '已下架' : '已上架')">{{ dish.is_active ? '下架' : '上架' }}</button>
+                  <button class="button small warn" type="button" @click="patchDish(dish, { is_sold_out: !dish.is_sold_out }, dish.is_sold_out ? '已恢复售卖' : '已标记售罄')">{{ dish.is_sold_out ? '恢复' : '售罄' }}</button>
+                  <button class="button small danger" type="button" @click="deleteDish(dish)">删除</button>
+                </div>
+              </article>
+            </div>
+            <div v-else class="empty">当前分类或搜索条件下没有菜品。</div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" v-if="orderDetailOpen && selectedOrder" @click.self="orderDetailOpen = false">
+      <article class="modal">
+        <div class="modal-head">
+          <h2 class="modal-title">订单详情 · {{ selectedOrder.order_no }}</h2>
+          <button class="button ghost" type="button" @click="orderDetailOpen = false">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid">
+            <section class="detail-block">
+              <div class="strong">用户与配送</div>
+              <div class="muted">联系人：{{ selectedOrder.contact_name }} / {{ selectedOrder.contact_phone }}</div>
+              <div class="muted">地址：{{ selectedOrder.delivery_address }}</div>
+              <div class="muted">备注：{{ selectedOrder.remark || '无' }}</div>
+            </section>
+            <section class="detail-block">
+              <div class="strong">支付与状态</div>
+              <div class="muted">状态：{{ statusLabel(selectedOrder.status) }} · {{ mealLabel(selectedOrder.meal_type) }} · {{ selectedOrder.delivery_date }}</div>
+              <div class="muted">支付：{{ formatTime(selectedOrder.paid_at) }} · {{ selectedOrder.transaction_id || '无交易号' }}</div>
+              <div class="muted">微信：{{ selectedOrder.wechat_trade_state || '-' }} / {{ selectedOrder.wechat_trade_state_desc || '-' }}</div>
+            </section>
+            <section class="detail-block wide">
+              <div class="strong">商品明细</div>
+              <div class="item-line" v-for="(item, index) in selectedOrder.items" :key="`${item.dish_id}-${index}`">
+                <div>
+                  <div class="strong">{{ item.dish_name }}</div>
+                  <div class="muted" v-if="formatFlavors(item.flavors)">口味：{{ formatFlavors(item.flavors) }}</div>
+                </div>
+                <div>x{{ item.quantity }}</div>
+                <div>{{ money(item.subtotal) }}</div>
+              </div>
+            </section>
+            <section class="detail-block wide">
+              <div class="panel-head">
+                <div>
+                  <div class="strong">订单记录文本</div>
+                  <div class="muted">这份内容和打印页同源，状态更新后会重新读取详情。</div>
+                </div>
+                <div class="row-actions">
+                  <button class="button small secondary" type="button" @click="copyText(selectedOrder.record_text, '订单记录已复制')">复制</button>
+                  <button class="button small" v-if="canPrintOrder(selectedOrder)" type="button" @click="printReceipt(selectedOrder.order_no)">打印</button>
+                  <button class="button small danger" v-if="canManualRefund(selectedOrder)" type="button" :disabled="manualRefundingOrderNo === selectedOrder.order_no" @click="manualRefund(selectedOrder)">
+                    {{ manualRefundingOrderNo === selectedOrder.order_no ? '退款中' : '手动退款' }}
+                  </button>
+                </div>
+              </div>
+              <textarea class="record" readonly :value="selectedOrder.record_text"></textarea>
+            </section>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="button success" v-if="selectedOrder.status === 'confirmed'" type="button" @click="markOrder(selectedOrder, 'delivering')">标记处理中</button>
+          <button class="button success" v-if="selectedOrder.status === 'delivering'" type="button" @click="markOrder(selectedOrder, 'completed')">标记已完成</button>
+          <button class="button secondary" type="button" @click="orderDetailOpen = false">关闭</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="modal-backdrop" v-if="refundConfirm.open && refundConfirm.order" @click.self="closeRefundConfirm">
+      <article class="modal small">
+        <div class="modal-head">
+          <h2 class="modal-title">确认手动退款</h2>
+          <button class="button ghost" type="button" @click="closeRefundConfirm">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-block">
+            <div class="strong">{{ refundConfirm.order.contact_name }} / {{ refundConfirm.order.contact_phone }}</div>
+            <div class="muted mono">{{ refundConfirm.order.order_no }}</div>
+            <div class="muted">{{ refundConfirm.order.item_summary || '未读取到商品明细' }}</div>
+            <div class="muted">实付 {{ money(refundConfirm.order.actual_amount) }}</div>
+          </div>
+          <div class="panel-note danger-note">这个操作只记录“已手动退款”，不会向微信发起自动退款。确认后订单会进入已退款分组，并计入已关闭。</div>
+          <div class="panel-note refund-message" v-if="refundConfirm.message">{{ refundConfirm.message }}</div>
+          <div class="panel-note refund-error" v-if="refundConfirm.error">{{ refundConfirm.error }}</div>
+        </div>
+        <div class="modal-foot">
+          <button class="button secondary" type="button" @click="closeRefundConfirm">取消</button>
+          <button class="button danger" type="button" data-refund-confirm="1" :disabled="manualRefundingOrderNo === refundConfirm.order.order_no" @click.stop.prevent="confirmManualRefund">
+            {{ manualRefundingOrderNo === refundConfirm.order.order_no ? '退款中' : '确认标记退款' }}
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <div class="modal-backdrop" v-if="categoryEditor.open" @click.self="closeCategoryEditor">
+      <article class="modal small">
+        <div class="modal-head">
+          <h2 class="modal-title">{{ categoryEditor.mode === 'edit' ? '编辑分类' : '新增分类' }}</h2>
+          <button class="button ghost" type="button" @click="closeCategoryEditor">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <label class="field wide">
+              <span class="field-label">分类名称</span>
+              <input class="input" v-model.trim="categoryEditor.name" type="text">
+            </label>
+            <label class="field">
+              <span class="field-label">排序</span>
+              <input class="input" v-model="categoryEditor.sort_order" type="number">
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" v-model="categoryEditor.is_active">
+              <span>启用分类</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="button secondary" type="button" @click="closeCategoryEditor">取消</button>
+          <button class="button" type="button" @click="submitCategory">保存分类</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="modal-backdrop" v-if="dishEditor.open" @click.self="closeDishEditor">
+      <article class="modal">
+        <div class="modal-head">
+          <h2 class="modal-title">{{ dishEditor.mode === 'edit' ? '编辑菜品' : '新增菜品' }}</h2>
+          <button class="button ghost" type="button" @click="closeDishEditor">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">菜品名称</span>
+              <input class="input" v-model.trim="dishEditor.name" type="text">
+            </label>
+            <label class="field">
+              <span class="field-label">分类</span>
+              <select class="select" v-model="dishEditor.category_id">
+                <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">价格</span>
+              <input class="input" v-model="dishEditor.price" type="number" step="0.01">
+            </label>
+            <label class="field">
+              <span class="field-label">库存（-1 不限）</span>
+              <input class="input" v-model="dishEditor.stock" type="number">
+            </label>
+            <label class="field">
+              <span class="field-label">排序</span>
+              <input class="input" v-model="dishEditor.sort_order" type="number">
+            </label>
+            <label class="field">
+              <span class="field-label">图片 URL</span>
+              <input class="input" v-model.trim="dishEditor.image_url" type="text">
+            </label>
+            <label class="field wide">
+              <span class="field-label">商品简介</span>
+              <textarea class="textarea" v-model.trim="dishEditor.description"></textarea>
+            </label>
+            <label class="field wide">
+              <span class="field-label">详情说明</span>
+              <textarea class="textarea" v-model.trim="dishEditor.detail_content"></textarea>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" v-model="dishEditor.is_active">
+              <span>上架</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" v-model="dishEditor.is_sold_out">
+              <span>售罄</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="button secondary" type="button" @click="closeDishEditor">取消</button>
+          <button class="button" type="button" @click="submitDish">保存菜品</button>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vant@3/lib/vant.min.js"></script>
+  <script src="js/config.js?v=20260428-0124"></script>
+  <script src="js/auth.js?v=20260428-0205"></script>
+  <script src="js/api.js?v=20260428-0124"></script>
+  <script src="js/workbench.js?v=20260428-0235"></script>
+</body>
+</html>
