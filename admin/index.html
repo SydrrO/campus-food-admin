@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>赛杜商家后台 v1</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0042">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0058">
 </head>
 <body>
   <div id="app" class="admin-shell">
@@ -349,7 +349,8 @@
             </div>
 
             <div class="user-fields">
-              <div class="user-field" v-if="selectedUserDetail.phone"><span>电话</span><strong>{{ selectedUserDetail.phone }}</strong></div>
+              <div class="muted" v-if="userDetailLoading">正在加载完整资料...</div>
+              <div class="user-field"><span>电话</span><strong>{{ selectedUserDetail.phone || '-' }}</strong></div>
               <div class="user-field"><span>积分</span><strong>{{ selectedUserDetail.points || 0 }}</strong></div>
               <div class="user-field"><span>订单数</span><strong>{{ selectedUserDetail.order_count || 0 }}</strong></div>
               <div class="user-field"><span>创建时间</span><strong>{{ formatTime(selectedUserDetail.created_at) }}</strong></div>
@@ -542,6 +543,6 @@
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0042"></script>
+  <script src="js/workbench.js?v=20260501-0058"></script>
 </body>
 </html>

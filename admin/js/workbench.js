@@ -64,6 +64,7 @@ createApp({
     const userTotal = ref(0);
     const userKeyword = ref("");
     const selectedUserDetail = ref(null);
+    const userDetailLoading = ref(false);
 
     const orderLoading = ref(false);
     const orders = ref([]);
@@ -155,12 +156,39 @@ createApp({
 
     const avatarText = (user) => shortText(user.nickname || user.public_uid || user.id || "U", 1).toUpperCase();
 
-    const openUserDetail = (user) => {
-      selectedUserDetail.value = user;
+    const openUserDetail = async (user) => {
+      const requestedUserId = user.id;
+      selectedUserDetail.value = {
+        phone: "",
+        points: 0,
+        order_count: 0,
+        created_at: null,
+        member_joined_at: null,
+        ...user,
+      };
+      userDetailLoading.value = true;
+
+      try {
+        const detail = await api.getRawUser(requestedUserId);
+        if (selectedUserDetail.value && selectedUserDetail.value.id === requestedUserId) {
+          selectedUserDetail.value = {
+            ...selectedUserDetail.value,
+            ...detail,
+            phone: detail.phone || "",
+            points: detail.points || 0,
+            order_count: detail.order_count || 0,
+          };
+        }
+      } catch (error) {
+        showToast(error.message || "用户详情加载失败");
+      } finally {
+        userDetailLoading.value = false;
+      }
     };
 
     const closeUserDetail = () => {
       selectedUserDetail.value = null;
+      userDetailLoading.value = false;
     };
 
     const categoryMap = computed(() => {
@@ -740,6 +768,7 @@ createApp({
       userTotal,
       userKeyword,
       selectedUserDetail,
+      userDetailLoading,
       orderLoading,
       orders,
       orderTotal,
