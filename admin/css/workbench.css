@@ -420,6 +420,27 @@ select {
   object-fit: cover;
 }
 
+.avatar.member,
+.user-avatar.member {
+  border: 2px solid #d7ba76;
+  box-shadow: 0 0 0 3px rgba(215, 186, 118, 0.22), 0 10px 22px rgba(185, 154, 93, 0.2);
+}
+
+.user-table {
+  min-width: 0;
+}
+
+.user-table th,
+.user-table td {
+  white-space: nowrap;
+}
+
+.user-name-cell {
+  max-width: 220px;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .tag {
   display: inline-flex;
   align-items: center;
@@ -738,6 +759,11 @@ select {
   border-top: 1px solid var(--line);
 }
 
+.user-detail-card {
+  display: grid;
+  gap: 14px;
+}
+
 .user-field {
   display: flex;
   justify-content: space-between;
@@ -840,6 +866,25 @@ select {
 
   .data-table {
     min-width: 980px;
+  }
+
+  .user-table {
+    min-width: 0;
+    font-size: 12px;
+  }
+
+  .user-table th,
+  .user-table td {
+    padding: 9px 7px;
+  }
+
+  .user-table .avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .user-name-cell {
+    max-width: 86px;
   }
 }
 
@@ -1203,5 +1248,17 @@ body {
 
   .page-title {
     font-size: 28px;
+  }
+
+  .user-table {
+    min-width: 0;
+  }
+
+  .user-field {
+    display: grid;
+  }
+
+  .user-field strong {
+    text-align: left;
   }
 }

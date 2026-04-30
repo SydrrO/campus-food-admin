@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛杜商家后台</title>
+  <title>赛杜商家后台 v1</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0028">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0042">
 </head>
 <body>
   <div id="app" class="admin-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-title">赛杜后台</div>
+        <div class="brand-title">赛杜后台 v1</div>
         <div class="brand-subtitle">只保留用户、订单、菜单。每个按钮都对应真实接口。</div>
       </div>
 
@@ -47,7 +47,7 @@
           <h1 class="page-title" v-if="activeTab === 'users'">用户数据</h1>
           <h1 class="page-title" v-if="activeTab === 'orders'">订单处理</h1>
           <h1 class="page-title" v-if="activeTab === 'menu'">菜单数据</h1>
-          <div class="page-note" v-if="activeTab === 'users'">这里不再只展示“会员摘要”，而是直接列出 users 表全部字段，方便排查账号、openid、头像、注册状态和积分。</div>
+          <div class="page-note" v-if="activeTab === 'users'">用户列表保留常用字段，更多资料从行尾按钮打开，手机上也能快速扫用户和消费情况。</div>
           <div class="page-note" v-if="activeTab === 'orders'">订单按状态归类展示，列表直接显示“谁点了什么”，详情和列表共用同一套后端数据，状态变更后会自动同步。</div>
           <div class="page-note" v-if="activeTab === 'menu'">菜单页只保留真实可用操作：分类新增/编辑/删除，菜品新增/编辑/上下架/售罄/删除。</div>
         </div>
@@ -94,23 +94,29 @@
           </div>
 
           <div class="table-wrap" v-if="users.length">
-            <table class="data-table">
+            <table class="data-table user-table">
               <thead>
                 <tr>
                   <th>头像</th>
-                  <th v-for="key in userColumns" :key="key">{{ userColumnLabel(key) }}</th>
+                  <th>用户ID</th>
+                  <th>昵称</th>
+                  <th>累计消费</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="user in users" :key="user.id">
                   <td>
-                    <div class="avatar">
+                    <div class="avatar" :class="{ member: user.is_member }">
                       <img v-if="user.avatar_url" :src="user.avatar_url" alt="">
                       <span v-else>{{ avatarText(user) }}</span>
                     </div>
                   </td>
-                  <td v-for="key in userColumns" :key="`${user.id}-${key}`" :class="{ mono: ['openid', 'public_uid', 'avatar_url'].includes(key) }">
-                    {{ key === 'avatar_url' || key === 'openid' ? shortText(formatCell(user, key), 46) : formatCell(user, key) }}
+                  <td class="mono strong">{{ formatUserId(user.id) }}</td>
+                  <td class="user-name-cell">{{ user.nickname || '未填写昵称' }}</td>
+                  <td class="strong">{{ money(user.total_spent) }}</td>
+                  <td>
+                    <button class="button small secondary" type="button" @click="openUserDetail(user)">更多</button>
                   </td>
                 </tr>
               </tbody>
@@ -323,6 +329,42 @@
       </section>
     </main>
 
+    <div class="modal-backdrop" v-if="selectedUserDetail" @click.self="closeUserDetail">
+      <article class="modal small">
+        <div class="modal-head">
+          <h2 class="modal-title">用户详情 · {{ formatUserId(selectedUserDetail.id) }}</h2>
+          <button class="button ghost" type="button" @click="closeUserDetail">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="user-detail-card">
+            <div class="user-summary">
+              <div class="user-avatar" :class="{ member: selectedUserDetail.is_member }">
+                <img v-if="selectedUserDetail.avatar_url" :src="selectedUserDetail.avatar_url" alt="">
+                <span v-else>{{ avatarText(selectedUserDetail) }}</span>
+              </div>
+              <div>
+                <div class="strong">{{ selectedUserDetail.nickname || '未填写昵称' }}</div>
+                <div class="muted mono">ID {{ formatUserId(selectedUserDetail.id) }}</div>
+              </div>
+            </div>
+
+            <div class="user-fields">
+              <div class="user-field" v-if="selectedUserDetail.phone"><span>电话</span><strong>{{ selectedUserDetail.phone }}</strong></div>
+              <div class="user-field"><span>积分</span><strong>{{ selectedUserDetail.points || 0 }}</strong></div>
+              <div class="user-field"><span>订单数</span><strong>{{ selectedUserDetail.order_count || 0 }}</strong></div>
+              <div class="user-field"><span>创建时间</span><strong>{{ formatTime(selectedUserDetail.created_at) }}</strong></div>
+              <div class="user-field" v-if="selectedUserDetail.is_member && selectedUserDetail.member_joined_at">
+                <span>会员开通时间</span><strong>{{ formatTime(selectedUserDetail.member_joined_at) }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="button secondary" type="button" @click="closeUserDetail">关闭</button>
+        </div>
+      </article>
+    </div>
+
     <div class="modal-backdrop" v-if="orderDetailOpen && selectedOrder" @click.self="orderDetailOpen = false">
       <article class="modal">
         <div class="modal-head">
@@ -500,6 +542,6 @@
   <script src="js/config.js?v=20260428-0124"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260501-0003"></script>
-  <script src="js/workbench.js?v=20260501-0012"></script>
+  <script src="js/workbench.js?v=20260501-0042"></script>
 </body>
 </html>

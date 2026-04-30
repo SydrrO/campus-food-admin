@@ -63,46 +63,7 @@ createApp({
     const users = ref([]);
     const userTotal = ref(0);
     const userKeyword = ref("");
-    const userColumns = [
-      "id",
-      "openid",
-      "public_uid",
-      "nickname",
-      "avatar_url",
-      "phone",
-      "is_registered",
-      "is_member",
-      "invite_code",
-      "invited_by_user_id",
-      "points",
-      "total_spent",
-      "registered_at",
-      "member_joined_at",
-      "created_at",
-      "updated_at",
-      "order_count",
-      "coupon_count",
-    ];
-    const userColumnLabels = {
-      id: "用户ID",
-      openid: "微信OpenID",
-      public_uid: "用户编号",
-      nickname: "昵称",
-      avatar_url: "头像链接",
-      phone: "手机号",
-      is_registered: "已注册",
-      is_member: "会员",
-      invite_code: "邀请码",
-      invited_by_user_id: "邀请人ID",
-      points: "积分",
-      total_spent: "累计消费",
-      registered_at: "注册时间",
-      member_joined_at: "会员开通时间",
-      created_at: "创建时间",
-      updated_at: "更新时间",
-      order_count: "订单数",
-      coupon_count: "优惠券数",
-    };
+    const selectedUserDetail = ref(null);
 
     const orderLoading = ref(false);
     const orders = ref([]);
@@ -179,14 +140,28 @@ createApp({
 
     const formatCell = (user, key) => {
       const value = user[key];
+      if (key === "id") return formatUserId(value);
       if (key.startsWith("is_")) return boolLabel(Boolean(value));
       if (key.endsWith("_at")) return formatTime(value);
       if (value === null || value === undefined || value === "") return "-";
       return String(value);
     };
 
+    const formatUserId = (value) => {
+      const id = Number(value || 0);
+      if (!Number.isFinite(id) || id <= 0) return "0000";
+      return String(Math.trunc(id)).padStart(4, "0");
+    };
+
     const avatarText = (user) => shortText(user.nickname || user.public_uid || user.id || "U", 1).toUpperCase();
-    const userColumnLabel = (key) => userColumnLabels[key] || key;
+
+    const openUserDetail = (user) => {
+      selectedUserDetail.value = user;
+    };
+
+    const closeUserDetail = () => {
+      selectedUserDetail.value = null;
+    };
 
     const categoryMap = computed(() => {
       const map = new Map();
@@ -764,8 +739,7 @@ createApp({
       users,
       userTotal,
       userKeyword,
-      userColumns,
-      userColumnLabel,
+      selectedUserDetail,
       orderLoading,
       orders,
       orderTotal,
@@ -792,6 +766,8 @@ createApp({
       setTab,
       loadUsers,
       resetUserSearch,
+      openUserDetail,
+      closeUserDetail,
       loadOrders,
       resetOrderFilters,
       copyMerchantReceipt,
@@ -826,6 +802,7 @@ createApp({
       formatTime,
       shortText,
       formatCell,
+      formatUserId,
       avatarText,
       loadMeta,
     };
