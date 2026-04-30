@@ -23,7 +23,8 @@ const showConfirmDialog = (options = {}) => {
 
 createApp({
   setup() {
-    const userIdInput = ref(new URLSearchParams(window.location.search).get("user_id") || "");
+    const initialParams = new URLSearchParams(window.location.search);
+    const userIdInput = ref(initialParams.get("keyword") || initialParams.get("user_id") || "");
     const selectedUser = ref(null);
     const coupons = ref([]);
     const navMenuOpen = ref(false);
@@ -59,13 +60,47 @@ createApp({
     const visibleCoupons = computed(() => coupons.value.filter((coupon) => coupon.status !== "used"));
     const usedCoupons = computed(() => coupons.value.filter((coupon) => coupon.status === "used"));
 
-    const normalizedUserId = () => {
-      const raw = String(userIdInput.value || "").trim();
+    const normalizeNumericUserId = (rawValue) => {
+      const raw = String(rawValue || "").trim();
       if (!/^\d+$/.test(raw)) {
         return null;
       }
       const value = Number(raw);
       return Number.isSafeInteger(value) && value > 0 ? value : null;
+    };
+
+    const selectedUserId = () => {
+      const value = Number(selectedUser.value?.id || 0);
+      return Number.isSafeInteger(value) && value > 0 ? value : null;
+    };
+
+    const resolveUserBySearch = async () => {
+      const raw = String(userIdInput.value || "").trim();
+      if (!raw) {
+        throw new Error("请输入用户 ID 或昵称");
+      }
+
+      const userId = normalizeNumericUserId(raw);
+      if (userId) {
+        return api.getRawUser(userId);
+      }
+
+      const result = await api.getRawUsers({ keyword: raw, page: 1, page_size: 10 });
+      const users = result?.items || [];
+      if (!users.length) {
+        throw new Error("没有找到匹配用户");
+      }
+
+      const exactMatches = users.filter((user) => {
+        const nickname = String(user.nickname || "").trim();
+        const publicUid = String(user.public_uid || "").trim();
+        return nickname === raw || publicUid === raw;
+      });
+      const candidates = exactMatches.length ? exactMatches : users;
+      if (candidates.length > 1) {
+        throw new Error("匹配到多个用户，请输入更完整昵称或用户 ID");
+      }
+      return candidates[0];
     };
 
     const statusLabel = (status) => ({
@@ -97,9 +132,9 @@ createApp({
     };
 
     const loadUserCoupons = async () => {
-      const userId = normalizedUserId();
-      if (!userId) {
-        errorMessage.value = "请输入有效的用户 ID";
+      const raw = String(userIdInput.value || "").trim();
+      if (!raw) {
+        errorMessage.value = "请输入用户 ID 或昵称";
         selectedUser.value = null;
         coupons.value = [];
         return;
@@ -108,13 +143,20 @@ createApp({
       loading.value = true;
       errorMessage.value = "";
       try {
-        const user = await api.getRawUser(userId);
+        const user = await resolveUserBySearch();
+        const userId = Number(user.id);
         const userCoupons = await api.getUserCoupons(userId);
         selectedUser.value = user;
         coupons.value = userCoupons || [];
         lastUpdatedAt.value = formatTime(new Date().toISOString());
         const url = new URL(window.location.href);
-        url.searchParams.set("user_id", String(userId));
+        url.searchParams.delete("user_id");
+        url.searchParams.delete("keyword");
+        if (normalizeNumericUserId(raw)) {
+          url.searchParams.set("user_id", String(userId));
+        } else {
+          url.searchParams.set("keyword", raw);
+        }
         window.history.replaceState(null, "", url.toString());
       } catch (error) {
         selectedUser.value = null;
@@ -159,7 +201,7 @@ createApp({
     };
 
     const issueCoupons = async () => {
-      const userId = normalizedUserId();
+      const userId = selectedUserId();
       if (!selectedUser.value || !userId) {
         showToast("请先查询用户");
         return;
@@ -204,7 +246,7 @@ createApp({
     };
 
     const deleteCoupon = async (coupon) => {
-      const userId = normalizedUserId();
+      const userId = selectedUserId();
       if (!userId || !coupon) return;
       if (!canDeleteCoupon(coupon)) {
         showToast("锁定中或已使用的优惠券不能删除");

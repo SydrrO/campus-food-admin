@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>优惠券发放 - 赛杜商家后台 v1.6</title>
+  <title>优惠券发放 - 赛杜商家后台 v1.7</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
-  <link rel="stylesheet" href="css/workbench.css?v=20260501-0160">
+  <link rel="stylesheet" href="css/workbench.css?v=20260501-0170">
 </head>
 <body>
   <div id="app" class="admin-shell">
@@ -13,7 +13,7 @@
       <header class="topbar">
         <div class="topbar-copy">
           <div class="top-brand">
-            <div class="top-brand-title">赛杜后台 v1.6</div>
+            <div class="top-brand-title">赛杜后台 v1.7</div>
             <div class="top-brand-subtitle">商家后台</div>
           </div>
           <div>
@@ -79,8 +79,8 @@
       <section class="panel">
         <form class="toolbar coupon-toolbar" @submit.prevent="loadUserCoupons">
           <label class="field">
-            <span class="field-label">用户 ID</span>
-            <input class="input mono" v-model.trim="userIdInput" type="text" inputmode="numeric" placeholder="例如 10001">
+            <span class="field-label">用户 ID / 昵称</span>
+            <input class="input" v-model.trim="userIdInput" type="text" placeholder="例如 0001 / SydrrO">
           </label>
           <div class="row-actions">
             <button class="button" type="submit" :disabled="loading">{{ loading ? '查询中' : '查询用户' }}</button>
@@ -186,20 +186,20 @@
             </thead>
             <tbody>
               <tr v-for="coupon in visibleCoupons" :key="coupon.id">
-                <td class="mono">#{{ coupon.id }}</td>
-                <td>
+                <td class="mono" data-label="券 ID">#{{ coupon.id }}</td>
+                <td data-label="名称">
                   <div class="strong">{{ coupon.display_title || coupon.title }}</div>
                   <div class="muted">{{ coupon.title }}</div>
                 </td>
-                <td>
+                <td data-label="状态">
                   <span class="coupon-status tag" :class="statusClass(coupon.status)">{{ statusLabel(coupon.status) }}</span>
                 </td>
-                <td>{{ coupon.amount ? money(coupon.amount) : '-' }}</td>
-                <td class="mono">{{ coupon.locked_order_id ? `#${coupon.locked_order_id}` : '-' }}</td>
-                <td>{{ formatTime(coupon.created_at) }}</td>
-                <td>{{ formatTime(coupon.revealed_at) }}</td>
-                <td>{{ formatTime(coupon.used_at) }}</td>
-                <td>
+                <td data-label="金额">{{ coupon.amount ? money(coupon.amount) : '-' }}</td>
+                <td class="mono" data-label="锁定订单">{{ coupon.locked_order_id ? `#${coupon.locked_order_id}` : '-' }}</td>
+                <td data-label="创建时间">{{ formatTime(coupon.created_at) }}</td>
+                <td data-label="揭晓时间">{{ formatTime(coupon.revealed_at) }}</td>
+                <td data-label="使用时间">{{ formatTime(coupon.used_at) }}</td>
+                <td data-label="操作">
                   <button
                     class="button small danger"
                     type="button"
@@ -239,16 +239,16 @@
               </thead>
               <tbody>
                 <tr v-for="coupon in usedCoupons" :key="`used-${coupon.id}`">
-                  <td class="mono">#{{ coupon.id }}</td>
-                  <td>
+                  <td class="mono" data-label="券 ID">#{{ coupon.id }}</td>
+                  <td data-label="名称">
                     <div class="strong">{{ coupon.display_title || coupon.title }}</div>
                     <div class="muted">{{ coupon.title }}</div>
                   </td>
-                  <td>{{ coupon.amount ? money(coupon.amount) : '-' }}</td>
-                  <td class="mono">{{ coupon.locked_order_id ? `#${coupon.locked_order_id}` : '-' }}</td>
-                  <td>{{ formatTime(coupon.created_at) }}</td>
-                  <td>{{ formatTime(coupon.revealed_at) }}</td>
-                  <td>{{ formatTime(coupon.used_at) }}</td>
+                  <td data-label="金额">{{ coupon.amount ? money(coupon.amount) : '-' }}</td>
+                  <td class="mono" data-label="锁定订单">{{ coupon.locked_order_id ? `#${coupon.locked_order_id}` : '-' }}</td>
+                  <td data-label="创建时间">{{ formatTime(coupon.created_at) }}</td>
+                  <td data-label="揭晓时间">{{ formatTime(coupon.revealed_at) }}</td>
+                  <td data-label="使用时间">{{ formatTime(coupon.used_at) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -264,6 +264,6 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js?v=20260428-0205"></script>
   <script src="js/api.js?v=20260430-2355"></script>
-  <script src="js/coupons.js?v=20260501-0160"></script>
+  <script src="js/coupons.js?v=20260501-0170"></script>
 </body>
 </html>
