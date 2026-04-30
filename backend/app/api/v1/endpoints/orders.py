@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models import Address, Dish, Order, OrderItem, OrderStatus, SystemConfig, User, UserCoupon
 from app.schemas.order import OrderCreateIn, OrderCreateOut, OrderDetailOut, OrderItemOut, OrderSummaryOut
 from app.schemas.response import ResponseModel
+from app.services.membership import record_order_spend
 from app.services.order_lifecycle import (
     close_expired_orders,
     close_order,
@@ -108,6 +109,12 @@ def _serialize_create_out(order: Order, expire_time: datetime | None) -> OrderCr
     )
 
 
+def _get_create_expire_time(order: Order, timeout_minutes: int | None) -> datetime | None:
+    if order.status != OrderStatus.unpaid:
+        return None
+    return get_order_expire_time(order, timeout_minutes)
+
+
 def _clear_timeout(order_no: str) -> None:
     try:
         clear_order_timeout(get_redis_client(), order_no)
@@ -183,7 +190,7 @@ async def create_order(
                 db.commit()
                 db.refresh(existing_order)
                 _clear_timeout(existing_order.order_no)
-            return ResponseModel(data=_serialize_create_out(existing_order, get_order_expire_time(existing_order, timeout_minutes)))
+            return ResponseModel(data=_serialize_create_out(existing_order, _get_create_expire_time(existing_order, timeout_minutes)))
 
     lunch_deadline = _parse_deadline(config_map.get("lunch_deadline", "10:00"), "10:00")
     dinner_deadline = _parse_deadline(config_map.get("dinner_deadline", "16:00"), "16:00")
@@ -243,10 +250,11 @@ async def create_order(
     if coupon_error:
         return coupon_error
 
-    discount_amount = member_discount_amount + coupon_discount_amount
-    actual_amount = total_amount + delivery_fee - discount_amount
-    if actual_amount < Decimal("0.01"):
-        actual_amount = Decimal("0.01")
+    payable_amount = (total_amount + delivery_fee).quantize(Decimal("0.01"))
+    requested_discount_amount = member_discount_amount + coupon_discount_amount
+    discount_amount = min(requested_discount_amount, payable_amount).quantize(Decimal("0.01"))
+    actual_amount = (payable_amount - discount_amount).quantize(Decimal("0.01"))
+    is_zero_pay_order = actual_amount <= Decimal("0.00")
     order_no = generate_order_no()
     created_at = now_china()
     order = Order(
@@ -262,15 +270,22 @@ async def create_order(
         delivery_fee=delivery_fee,
         discount_amount=discount_amount,
         actual_amount=actual_amount,
-        status=OrderStatus.unpaid,
+        status=OrderStatus.confirmed if is_zero_pay_order else OrderStatus.unpaid,
         remark=payload.remark,
         coupon_id=int(selected_coupon.id) if selected_coupon else None,
+        pay_method=("coupon" if selected_coupon else "discount") if is_zero_pay_order else None,
+        paid_at=created_at if is_zero_pay_order else None,
         created_at=created_at,
     )
     db.add(order)
     db.flush()
 
-    if selected_coupon:
+    if selected_coupon and is_zero_pay_order:
+        selected_coupon.status = "used"
+        selected_coupon.used_at = created_at
+        selected_coupon.locked_order_id = order.id
+        db.add(selected_coupon)
+    elif selected_coupon:
         selected_coupon.status = "reserved"
         selected_coupon.locked_order_id = order.id
         db.add(selected_coupon)
@@ -279,19 +294,23 @@ async def create_order(
         order_item.order_id = order.id
         db.add(order_item)
 
+    if is_zero_pay_order:
+        record_order_spend(db, order)
+
     db.commit()
     db.refresh(order)
 
-    expire_time = get_order_expire_time(order, timeout_minutes)
-    try:
-        redis_client = get_redis_client()
-        track_order_timeout(
-            redis_client,
-            order.order_no,
-            timeout_minutes * 60,
-        )
-    except RedisError:
-        pass
+    expire_time = _get_create_expire_time(order, timeout_minutes)
+    if order.status == OrderStatus.unpaid:
+        try:
+            redis_client = get_redis_client()
+            track_order_timeout(
+                redis_client,
+                order.order_no,
+                timeout_minutes * 60,
+            )
+        except RedisError:
+            pass
 
     return ResponseModel(
         data=_serialize_create_out(order, expire_time)

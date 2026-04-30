@@ -133,6 +133,18 @@ async def prepay(
     if _close_expired_unpaid_order(db, order, timeout_minutes):
         return ResponseModel(code=400, message="订单已超过15分钟支付时间，已自动关闭", data=None)
     if order.status != OrderStatus.unpaid:
+        if order.actual_amount is not None and order.actual_amount <= 0 and order.status == OrderStatus.confirmed:
+            return ResponseModel(
+                message="订单已通过优惠抵扣完成，无需微信支付",
+                data=PaymentPrepayOut(
+                    timeStamp="",
+                    nonceStr="",
+                    package=f"prepay_id=free_{order.order_no}",
+                    signType="NONE",
+                    paySign="",
+                    mode="free",
+                ),
+            )
         return ResponseModel(code=400, message="Only unpaid orders can start payment", data=None)
 
     try:
