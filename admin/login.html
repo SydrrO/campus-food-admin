@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台登录 v3.6</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
+    <style>
+        :root {
+            --bg: #eef4fb;
+            --panel: rgba(255, 255, 255, 0.88);
+            --ink: #202838;
+            --muted: #687586;
+            --line: rgba(216, 226, 239, 0.94);
+            --accent: #2f80ed;
+            --cyan: #25c6b7;
+            --gold: #f0a83a;
+            --shadow: 0 24px 72px rgba(31, 45, 61, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        * { box-sizing: border-box; }
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                linear-gradient(180deg, #fbfdff 0%, #eef4fb 48%, #e9f0f8 100%),
+                repeating-linear-gradient(90deg, rgba(47, 128, 237, 0.035) 0 1px, transparent 1px 42px);
+            color: var(--ink);
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            letter-spacing: 0;
+        }
+        .page {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            overflow: hidden;
+        }
+        .page::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(180deg, rgba(221, 235, 251, 0.72), rgba(255, 255, 255, 0) 360px),
+                linear-gradient(120deg, rgba(37, 198, 183, 0.08), rgba(47, 128, 237, 0.04) 46%, rgba(255, 255, 255, 0) 72%);
+            pointer-events: none;
+        }
+        .login-shell {
+            position: relative;
+            z-index: 1;
+            width: min(430px, 100%);
+        }
+        .login-brand {
+            margin-bottom: 18px;
+        }
+        .login-brand-name {
+            display: inline-block;
+            color: transparent;
+            background: linear-gradient(105deg, #2f80ed 0%, #18a8ff 42%, #25c6b7 72%, #f0a83a 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            font-size: clamp(34px, 9vw, 44px);
+            font-weight: 950;
+            line-height: 0.98;
+            filter: drop-shadow(0 8px 22px rgba(47, 128, 237, 0.18));
+        }
+        .login-brand-subtitle {
+            margin-top: 10px;
+            color: #8a96a8;
+            font-size: 13px;
+            font-weight: 850;
+        }
+        .login-box {
+            position: relative;
+            width: 100%;
+            padding: 28px;
+            border: 1px solid var(--line);
+            border-radius: 26px;
+            background: var(--panel);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(16px);
+        }
+        .login-box::before {
+            display: none;
+        }
+        .login-title {
+            margin: 0 0 6px;
+            color: #202838;
+            font-size: 24px;
+            font-weight: 950;
+        }
+        .login-note {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        .van-cell-group--inset {
+            margin: 0;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 12px 28px rgba(31, 45, 61, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        }
+        .van-cell {
+            min-height: 58px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .van-cell::after {
+            border-bottom-color: rgba(216, 226, 239, 0.9);
+        }
+        input,
+        textarea,
+        select,
+        .van-field__control {
+            font-size: 16px !important;
+            color: var(--ink);
+        }
+        .van-field__control {
+            line-height: 24px;
+        }
+        .van-field__body {
+            min-height: 32px;
+        }
+        .van-field__label {
+            color: var(--muted);
+            font-size: 16px;
+            font-weight: 850;
+        }
+        .van-button,
+        .van-field__clear {
+            touch-action: manipulation;
+        }
+        .van-button--primary {
+            min-height: 48px;
+            border-color: #111827;
+            background: linear-gradient(135deg, #111827, #2b3548);
+            box-shadow: 0 14px 30px rgba(17, 24, 39, 0.18);
+            font-weight: 900;
+        }
+        .van-button--round {
+            border-radius: 17px;
+        }
+        .login-footnote {
+            margin-top: 14px;
+            color: #98a2b3;
+            font-size: 12px;
+            text-align: center;
+        }
+        @media (max-width: 420px) {
+            .page {
+                align-items: flex-start;
+                padding: 24px 14px;
+            }
+            .login-brand {
+                margin-top: 10px;
+            }
+            .login-box {
+                padding: 22px;
+                border-radius: 24px;
+            }
+            .login-title {
+                font-size: 22px;
+            }
+            .van-cell {
+                min-height: 56px;
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="page">
+        <div class="login-shell">
+            <div class="login-brand">
+                <div class="login-brand-name">赛杜甄选</div>
+                <div class="login-brand-subtitle">MERCHANT ADMIN · v3.6</div>
+            </div>
+            <div class="login-box">
+                <h1 class="login-title">商家后台登录</h1>
+                <p class="login-note">进入订单、用户、菜单和对账工作台。</p>
+
+                <form @submit.prevent="handleSubmit" style="margin-top: 22px;">
+                    <van-cell-group inset>
+                        <van-field
+                            v-model.trim="username"
+                            label="用户名"
+                            placeholder="请输入管理员用户名"
+                            autocomplete="username"
+                            clearable
+                            required
+                        ></van-field>
+                        <van-field
+                            v-model="password"
+                            type="password"
+                            label="密码"
+                            placeholder="请输入管理员密码"
+                            autocomplete="current-password"
+                            clearable
+                            required
+                        ></van-field>
+                    </van-cell-group>
+
+                    <div style="margin: 14px 0 0; display: flex; align-items: center;">
+                        <van-checkbox v-model="remember" shape="square" icon-size="16px" style="font-size:14px;color:var(--muted);">记住密码</van-checkbox>
+                    </div>
+
+                    <div style="margin: 10px 0 0;">
+                        <van-button
+                            round
+                            block
+                            type="primary"
+                            native-type="submit"
+                            :loading="submitting"
+                            loading-text="登录中..."
+                        >
+                            登录后台
+                        </van-button>
+                    </div>
+                </form>
+                <div class="login-footnote">SESSION PROTECTED</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vant@3/lib/vant.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260511-remember"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const { createApp, ref } = Vue;
+
+        createApp({
+            setup() {
+                const { showToast } = vant;
+                const username = ref('');
+                const password = ref('');
+                const remember = ref(false);
+                const submitting = ref(false);
+
+                const savedCreds = getRememberedCreds();
+                if (savedCreds && savedCreds.username) {
+                    username.value = savedCreds.username;
+                    password.value = savedCreds.password || '';
+                    remember.value = true;
+                }
+                const getRedirectTarget = () => {
+                    const redirect = new URLSearchParams(window.location.search).get('redirect');
+                    if (!redirect) {
+                        return 'index.html';
+                    }
+                    const target = redirect.trim();
+                    if (
+                        !target ||
+                        target.includes('\\') ||
+                        target.startsWith('//') ||
+                        /^https?:\/\//i.test(target) ||
+                        target.split('?')[0].endsWith('login.html')
+                    ) {
+                        return 'index.html';
+                    }
+                    return target;
+                };
+
+                const handleSubmit = async () => {
+                    if (submitting.value) {
+                        return;
+                    }
+
+                    if (!username.value || !password.value) {
+                        showToast('请输入用户名和密码');
+                        return;
+                    }
+
+                    submitting.value = true;
+
+                    try {
+                        await api.adminLogin(username.value, password.value, remember.value);
+                        if (remember.value) {
+                            saveRememberedCreds(username.value, password.value);
+                        } else {
+                            clearRememberedCreds();
+                        }
+                        window.location.replace(getRedirectTarget());
+                    } catch (error) {
+                        showToast(error.message || '登录失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+
+                return {
+                    username,
+                    password,
+                    remember,
+                    submitting,
+                    handleSubmit
+                };
+            }
+        }).use(vant).mount('#app');
+    </script>
+</body>
+</html>

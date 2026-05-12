@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打印小票</title>
+    <style>
+        :root {
+            --ink: #141414;
+            --muted: #6b665d;
+            --paper: #fff;
+            --line: #ded8ca;
+            --soft: #fff;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #e9e6de;
+            color: var(--ink);
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            letter-spacing: 0;
+        }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px;
+            background: rgba(255, 254, 249, 0.94);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(12px);
+        }
+
+        .toolbar button {
+            height: 34px;
+            border: 1px solid var(--ink);
+            background: var(--ink);
+            color: #fffdf5;
+            padding: 0 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .toolbar button.secondary {
+            background: transparent;
+            color: var(--ink);
+        }
+
+        .toolbar .hint {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .preview-shell {
+            min-height: calc(100vh - 64px);
+            padding: 24px 20px 40px;
+            display: grid;
+            place-items: start center;
+        }
+
+        .receipt {
+            width: 80mm;
+            min-height: 210mm;
+            background: var(--paper);
+            box-shadow: 0 22px 60px rgba(22, 18, 10, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .receipt::before,
+        .receipt::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background:
+                radial-gradient(circle at 4px 4px, transparent 0 3px, var(--paper) 3.2px) 0 0 / 8px 8px repeat-x;
+            z-index: 2;
+        }
+
+        .receipt::before { top: -4px; }
+        .receipt::after { bottom: -4px; transform: rotate(180deg); }
+
+        .ticket { padding: 5mm 4mm 6mm; }
+
+        .brand-band {
+            background: var(--ink);
+            color: #fffdf5;
+            min-height: 38mm;
+            padding: 4.6mm 4mm 4mm;
+            margin: -5mm -4mm 4.5mm;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-band::after {
+            content: "";
+            position: absolute;
+            right: -16mm;
+            top: -12mm;
+            width: 34mm;
+            height: 34mm;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: 50%;
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 3mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-mark {
+            width: 14mm;
+            height: 14mm;
+            border: 1.6px solid #fffdf5;
+            display: grid;
+            place-items: center;
+            position: relative;
+            flex: 0 0 auto;
+        }
+
+        .brand-mark::before,
+        .brand-mark::after {
+            content: "";
+            position: absolute;
+            background: #fffdf5;
+        }
+
+        .brand-mark::before {
+            width: 5.6mm;
+            height: 1.4px;
+            top: 3.3mm;
+            right: 2.7mm;
+            transform: rotate(28deg);
+        }
+
+        .brand-mark::after {
+            width: 1.4px;
+            height: 5.6mm;
+            left: 3.4mm;
+            bottom: 2.8mm;
+            transform: rotate(28deg);
+        }
+
+        .brand-mark span {
+            font-size: 17px;
+            line-height: 1;
+            font-weight: 800;
+            transform: translateY(-0.2mm);
+        }
+
+        .brand-name {
+            font-weight: 900;
+            font-size: 22px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .brand-subtitle {
+            margin-top: 1.5mm;
+            font-size: 9px;
+            color: rgba(255, 253, 245, 0.72);
+            text-transform: uppercase;
+            word-spacing: 2px;
+        }
+
+        .brand-meta {
+            margin-top: 5mm;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-chip {
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            padding: 2.2mm 2mm;
+            min-height: 11mm;
+        }
+
+        .chip-label {
+            font-size: 8px;
+            color: rgba(255, 253, 245, 0.58);
+            margin-bottom: 1.4mm;
+        }
+
+        .chip-value {
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .section {
+            border-top: 1px solid var(--line);
+            padding-top: 3mm;
+            margin-top: 3.4mm;
+        }
+
+        .section:first-of-type {
+            border-top: 0;
+            padding-top: 0;
+            margin-top: 0;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2mm;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .section-title span:last-child {
+            color: var(--muted);
+            font-size: 8px;
+            font-weight: 700;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 15mm 1fr;
+            gap: 1.4mm 2mm;
+            font-size: 10.5px;
+            line-height: 1.45;
+        }
+
+        .info-grid .label { color: var(--muted); }
+        .info-grid .value { font-weight: 650; word-break: break-word; }
+
+        .order-note {
+            margin-top: 2.4mm;
+            padding: 2mm;
+            background: var(--soft);
+            font-size: 10px;
+            line-height: 1.45;
+            border-left: 2px solid var(--ink);
+        }
+
+        .item-list { display: grid; gap: 2.6mm; }
+        .item-row {
+            display: grid;
+            grid-template-columns: 1fr 11mm 16mm;
+            gap: 2mm;
+            align-items: start;
+        }
+
+        .item-name {
+            font-size: 12.5px;
+            font-weight: 850;
+            line-height: 1.2;
+        }
+
+        .item-meta {
+            margin-top: 0.8mm;
+            color: var(--muted);
+            font-size: 8.5px;
+            line-height: 1.35;
+        }
+
+        .item-qty {
+            text-align: right;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .item-price {
+            text-align: right;
+            font-size: 12px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .dash {
+            margin: 3.4mm 0 3mm;
+            border-top: 1px dashed #9f998e;
+        }
+
+        .total-grid {
+            display: grid;
+            gap: 1.5mm;
+            font-size: 10.5px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 4mm;
+        }
+
+        .total-row .label { color: var(--muted); }
+        .total-row .value { font-weight: 780; }
+
+        .pay-row {
+            margin-top: 2.4mm;
+            padding: 3mm 0 1.2mm;
+            border-top: 2px solid var(--ink);
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+        }
+
+        .pay-label {
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .pay-value {
+            font-size: 25px;
+            font-weight: 950;
+            line-height: 0.9;
+            white-space: nowrap;
+        }
+
+        .ops-strip {
+            margin-top: 3.6mm;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            border: 1px solid var(--ink);
+        }
+
+        .ops-box {
+            min-height: 13mm;
+            padding: 2mm 1.5mm;
+            border-right: 1px solid var(--ink);
+            text-align: center;
+        }
+
+        .ops-box:last-child { border-right: 0; }
+        .ops-label { font-size: 8px; color: var(--muted); margin-bottom: 1.6mm; }
+        .ops-value { font-size: 12px; font-weight: 900; line-height: 1.15; }
+
+        .footer {
+            margin-top: 4mm;
+            text-align: center;
+            color: var(--muted);
+            font-size: 8px;
+            line-height: 1.55;
+        }
+
+        .barcode {
+            margin: 2.6mm auto 1.2mm;
+            width: 45mm;
+            height: 8mm;
+            background:
+                linear-gradient(90deg,
+                    #111 0 1px, transparent 1px 3px,
+                    #111 3px 5px, transparent 5px 7px,
+                    #111 7px 8px, transparent 8px 11px,
+                    #111 11px 14px, transparent 14px 16px,
+                    #111 16px 17px, transparent 17px 20px,
+                    #111 20px 23px, transparent 23px 26px,
+                    #111 26px 27px, transparent 27px 30px,
+                    #111 30px 32px, transparent 32px 35px,
+                    #111 35px 36px, transparent 36px 39px,
+                    #111 39px 42px, transparent 42px 45px,
+                    #111 45px 46px, transparent 46px 49px,
+                    #111 49px 52px, transparent 52px 55px,
+                    #111 55px 57px, transparent 57px 60px,
+                    #111 60px 63px, transparent 63px 66px,
+                    #111 66px 68px, transparent 68px 72px,
+                    #111 72px 75px, transparent 75px 78px,
+                    #111 78px 79px, transparent 79px 82px,
+                    #111 82px 85px, transparent 85px 88px,
+                    #111 88px 90px, transparent 90px 100%);
+        }
+
+        .loading,
+        .error {
+            width: 80mm;
+            padding: 24px;
+            background: #fff;
+            box-shadow: 0 12px 32px rgba(22, 18, 10, 0.14);
+            font-weight: 800;
+        }
+
+        .error { color: #a33a22; }
+
+        body.a4-mode {
+            background: #fff;
+        }
+
+        body.a4-mode .preview-shell {
+            display: block;
+            padding: 12px;
+            background: #fff;
+        }
+
+        .a4-sheet {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 4mm;
+            background: #fff;
+            box-shadow: 0 18px 52px rgba(22, 18, 10, 0.2);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            align-content: start;
+            gap: 1.5mm;
+        }
+
+        .a4-ticket {
+            min-height: 55mm;
+            border: 1px solid #1b1a17;
+            background: #fff;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            overflow: hidden;
+        }
+
+        .a4-brand {
+            background: #111;
+            color: #fffdf5;
+            padding: 2mm;
+            position: relative;
+        }
+
+        .a4-brand::after {
+            content: "";
+            position: absolute;
+            right: -10mm;
+            top: -9mm;
+            width: 26mm;
+            height: 26mm;
+            border: 0.7px solid rgba(255, 255, 255, 0.28);
+            border-radius: 50%;
+        }
+
+        .a4-brand-row {
+            display: flex;
+            align-items: center;
+            gap: 2.4mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .a4-logo {
+            width: 8mm;
+            height: 8mm;
+            border: 1px solid #fffdf5;
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            font-weight: 900;
+            flex: 0 0 auto;
+        }
+
+        .a4-brand-name {
+            font-size: 14px;
+            font-weight: 950;
+            line-height: 1;
+        }
+
+        .a4-brand-sub {
+            margin-top: 0.6mm;
+            font-size: 6.5px;
+            color: rgba(255, 253, 245, 0.78);
+            white-space: nowrap;
+        }
+
+        .a4-chip-grid {
+            margin-top: 1.6mm;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .a4-chip {
+            border: 0.7px solid rgba(255, 255, 255, 0.3);
+            padding: 1mm;
+            min-height: 7mm;
+        }
+
+        .a4-chip-label {
+            font-size: 7px;
+            color: rgba(255, 253, 245, 0.62);
+            margin-bottom: 0.7mm;
+        }
+
+        .a4-chip-value {
+            font-size: 11px;
+            font-weight: 950;
+            line-height: 1;
+        }
+
+        .a4-body {
+            padding: 1.8mm 2mm 2mm;
+        }
+
+        .a4-section {
+            border-top: 0.7px solid #ded8ca;
+            padding-top: 1.2mm;
+            margin-top: 1.2mm;
+        }
+
+        .a4-section:first-child {
+            border-top: 0;
+            margin-top: 0;
+            padding-top: 0;
+        }
+
+        .a4-section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 8.5px;
+            font-weight: 950;
+            margin-bottom: 1mm;
+        }
+
+        .a4-section-title span:last-child {
+            color: #6b665d;
+            font-size: 7.5px;
+            font-weight: 850;
+        }
+
+        .a4-info-grid {
+            display: grid;
+            grid-template-columns: 10mm 1fr;
+            gap: 0.5mm 1mm;
+            font-size: 7.8px;
+            line-height: 1.2;
+        }
+
+        .a4-label { color: #6b665d; }
+        .a4-value {
+            font-weight: 850;
+            word-break: break-word;
+        }
+
+        .a4-note {
+            margin-top: 0.8mm;
+            padding: 0.8mm;
+            background: #fff;
+            border-left: 1.5px solid #111;
+            font-size: 7.4px;
+            line-height: 1.25;
+        }
+
+        .a4-item-list {
+            display: grid;
+            gap: 0.8mm;
+        }
+
+        .a4-item-row {
+            display: grid;
+            grid-template-columns: 1fr 7mm 12mm;
+            gap: 0.8mm;
+            align-items: start;
+        }
+
+        .a4-item-name {
+            font-size: 8.8px;
+            font-weight: 950;
+            line-height: 1.15;
+        }
+
+        .a4-item-meta {
+            margin-top: 0.5mm;
+            color: #6b665d;
+            font-size: 6.8px;
+            line-height: 1.2;
+        }
+
+        .a4-item-qty,
+        .a4-item-price {
+            text-align: right;
+            font-size: 8px;
+            font-weight: 950;
+            white-space: nowrap;
+        }
+
+        .a4-total {
+            margin-top: 1mm;
+            padding-top: 0.8mm;
+            border-top: 1px dashed #918a7e;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 2mm;
+        }
+
+        .a4-total-label {
+            font-size: 8.5px;
+            font-weight: 950;
+        }
+
+        .a4-total-value {
+            font-size: 16px;
+            font-weight: 950;
+            line-height: 0.9;
+        }
+
+        .a4-ticket-foot {
+            margin-top: 1mm;
+            border: 0.7px solid #111;
+            display: flex;
+            text-align: center;
+        }
+
+        .a4-op {
+            flex: 1;
+            padding: 0.7mm 0.5mm;
+            border-right: 0.7px solid #111;
+        }
+
+        .a4-op:last-child {
+            border-right: 0;
+        }
+
+        .a4-op-label {
+            color: #6b665d;
+            font-size: 7px;
+            margin-bottom: 0.4mm;
+        }
+
+        .a4-op-value {
+            font-size: 10px;
+            font-weight: 950;
+        }
+
+        @media print {
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+
+            html, body {
+                width: 80mm;
+                margin: 0;
+                background: #fff;
+            }
+
+            .toolbar { display: none; }
+            .preview-shell { padding: 0; min-height: auto; display: block; }
+            .receipt { box-shadow: none; width: 80mm; min-height: 0; }
+
+            .brand-band {
+                background: #111 !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .order-note {
+                background: #f3f3f3 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .a4-ticket {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button type="button" onclick="window.print()">打印小票</button>
+        <button class="secondary" type="button" onclick="window.close()">关闭</button>
+        <span class="hint">80mm 小票版式，普通打印机可先缩放预览</span>
+    </div>
+    <main class="preview-shell">
+        <article id="receipt" class="receipt">
+            <div class="loading">正在读取订单...</div>
+        </article>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260428-0205"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const PRINT_QUEUE_KEY = "sydroo_order_print_queue_v1";
+        const PRINT_STYLE_ID = "dynamic-print-page-style";
+
+        const setPrintPageMode = (mode) => {
+            let style = document.getElementById(PRINT_STYLE_ID);
+            if (!style) {
+                style = document.createElement('style');
+                style.id = PRINT_STYLE_ID;
+                document.head.appendChild(style);
+            }
+            style.textContent = mode === 'a4'
+                ? `@media print {
+                    @page { size: A4 portrait; margin: 5mm; }
+                    html, body { width: auto !important; margin: 0 !important; background: #fff !important; }
+                    .toolbar { display: none !important; }
+                    .preview-shell { display: block !important; min-height: 0 !important; padding: 0 !important; }
+                    .a4-sheet { width: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; background: #fff !important; grid-template-columns: repeat(3, 1fr) !important; gap: 1.5mm !important; }
+                    .a4-ticket { min-height: 55mm !important; background: #fff !important; }
+                    .a4-brand { background: #111 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .a4-note { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                }`
+                : `@media print { @page { size: 80mm auto; margin: 0; } }`;
+        };
+
+        const money = (value) => `¥${Number(value || 0).toFixed(2)}`;
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+
+        const statusLabel = (status) => ({
+            unpaid: '待支付',
+            confirmed: '已确认',
+            delivering: '处理中',
+            completed: '已完成',
+            refunded: '已退款',
+            closed: '已关闭'
+        }[status] || status || '-');
+
+        const printableOrderStatuses = new Set(['confirmed', 'delivering', 'completed']);
+        const canPrintOrder = (order) => printableOrderStatuses.has(order?.status);
+
+        const mealLabel = (mealType) => ({
+            lunch: '午餐',
+            dinner: '晚餐'
+        }[mealType] || mealType || '-');
+
+        const formatTime = (value) => {
+            if (!value) return '-';
+            return new Date(value).toLocaleString('zh-CN', { hour12: false });
+        };
+
+        const getPickupNo = (order) => {
+            const id = Number(order.order_id || 0);
+            if (id > 0) return `A${String(id).padStart(2, '0')}`;
+            return String(order.order_no || '').slice(-3) || '-';
+        };
+
+        const formatFlavors = (flavors) => {
+            if (!flavors) return '';
+            if (typeof flavors === 'string') return flavors;
+            return Object.entries(flavors)
+                .filter(([, value]) => value !== null && value !== '' && JSON.stringify(value) !== '[]' && JSON.stringify(value) !== '{}')
+                .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join('/') : value}`)
+                .join('；');
+        };
+
+        const buildReceiptData = (order) => {
+            const goods = Number(order.total_amount || 0);
+            const delivery = Number(order.delivery_fee || 0);
+            const paid = Number(order.actual_amount || 0);
+            const discount = Math.max(0, goods + delivery - paid);
+
+            return {
+                brand: {
+                    name: '赛杜甄选',
+                    subtitle: 'SYDRRO SELECT · 港式古法 · 校园热食'
+                },
+                order: {
+                    orderNo: order.order_no,
+                    pickupNo: getPickupNo(order),
+                    status: statusLabel(order.status),
+                    paidAt: formatTime(order.paid_at),
+                    mealType: mealLabel(order.meal_type),
+                    deliveryDate: order.delivery_date,
+                    printAt: formatTime(new Date().toISOString())
+                },
+                customer: {
+                    name: order.contact_name,
+                    phone: order.contact_phone,
+                    address: order.delivery_address,
+                    remark: order.remark || ''
+                },
+                items: (order.items || []).map((item) => ({
+                    name: item.dish_name,
+                    quantity: item.quantity,
+                    subtotal: item.subtotal,
+                    meta: formatFlavors(item.flavors) || `单价 ${money(item.price)}`
+                })),
+                totals: { goods, delivery, discount, paid }
+            };
+        };
+
+        function renderReceipt(data) {
+            const itemsHtml = data.items.map((item) => `
+                <div class="item-row">
+                    <div>
+                        <div class="item-name">${escapeHtml(item.name)}</div>
+                        <div class="item-meta">${escapeHtml(item.meta || '')}</div>
+                    </div>
+                    <div class="item-qty">x${Number(item.quantity || 0)}</div>
+                    <div class="item-price">${money(item.subtotal)}</div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="ticket">
+                    <header class="brand-band">
+                        <div class="brand-row">
+                            <div class="brand-mark" aria-label="赛杜 logo"><span>赛</span></div>
+                            <div>
+                                <div class="brand-name">${escapeHtml(data.brand.name)}</div>
+                                <div class="brand-subtitle">${escapeHtml(data.brand.subtitle)}</div>
+                            </div>
+                        </div>
+                        <div class="brand-meta">
+                            <div class="brand-chip">
+                                <div class="chip-label">取餐号</div>
+                                <div class="chip-value">${escapeHtml(data.order.pickupNo)}</div>
+                            </div>
+                            <div class="brand-chip">
+                                <div class="chip-label">餐次</div>
+                                <div class="chip-value">${escapeHtml(data.order.mealType)}</div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <section class="section">
+                        <div class="section-title"><span>订单信息</span><span>${escapeHtml(data.order.status)}</span></div>
+                        <div class="info-grid">
+                            <div class="label">订单号</div><div class="value">${escapeHtml(data.order.orderNo)}</div>
+                            <div class="label">送达日</div><div class="value">${escapeHtml(data.order.deliveryDate)}</div>
+                            <div class="label">支付时</div><div class="value">${escapeHtml(data.order.paidAt)}</div>
+                            <div class="label">打印时</div><div class="value">${escapeHtml(data.order.printAt)}</div>
+                        </div>
+                    </section>
+
+                    <section class="section">
+                        <div class="section-title"><span>配送信息</span><span>DELIVERY</span></div>
+                        <div class="info-grid">
+                            <div class="label">姓名</div><div class="value">${escapeHtml(data.customer.name)}</div>
+                            <div class="label">电话</div><div class="value">${escapeHtml(data.customer.phone)}</div>
+                            <div class="label">地址</div><div class="value">${escapeHtml(data.customer.address)}</div>
+                        </div>
+                        ${data.customer.remark ? `<div class="order-note">${escapeHtml(data.customer.remark)}</div>` : ''}
+                    </section>
+
+                    <section class="section">
+                        <div class="section-title"><span>商品明细</span><span>${data.items.length} 款</span></div>
+                        <div class="item-list">${itemsHtml}</div>
+                    </section>
+
+                    <div class="dash"></div>
+                    <section>
+                        <div class="total-grid">
+                            <div class="total-row"><span class="label">商品小计</span><span class="value">${money(data.totals.goods)}</span></div>
+                            <div class="total-row"><span class="label">配送费</span><span class="value">${money(data.totals.delivery)}</span></div>
+                            <div class="total-row"><span class="label">优惠抵扣</span><span class="value">-${money(data.totals.discount)}</span></div>
+                        </div>
+                        <div class="pay-row">
+                            <div class="pay-label">实付金额</div>
+                            <div class="pay-value">${money(data.totals.paid)}</div>
+                        </div>
+                    </section>
+
+                    <section class="ops-strip">
+                        <div class="ops-box"><div class="ops-label">备餐</div><div class="ops-value">确认</div></div>
+                        <div class="ops-box"><div class="ops-label">配送</div><div class="ops-value">出发</div></div>
+                        <div class="ops-box"><div class="ops-label">完成</div><div class="ops-value">签收</div></div>
+                    </section>
+
+                    <footer class="footer">
+                        <div class="barcode"></div>
+                        <div>${escapeHtml(data.order.orderNo)}</div>
+                        <div>赛杜甄选 · 校园热食订单凭证</div>
+                    </footer>
+                </div>
+            `;
+        }
+
+        function renderA4Sheet(orders) {
+            const ticketsHtml = orders.map((order) => {
+                const data = buildReceiptData(order);
+                const itemsHtml = data.items.map((item) => `
+                    <div class="a4-item-row">
+                        <div>
+                            <div class="a4-item-name">${escapeHtml(item.name)}</div>
+                            <div class="a4-item-meta">${escapeHtml(item.meta || '')}</div>
+                        </div>
+                        <div class="a4-item-qty">x${Number(item.quantity || 0)}</div>
+                        <div class="a4-item-price">${money(item.subtotal)}</div>
+                    </div>
+                `).join('');
+                const remarkHtml = data.customer.remark
+                    ? `<div class="a4-note">备注：${escapeHtml(data.customer.remark)}</div>`
+                    : '';
+                return `
+                    <section class="a4-ticket">
+                        <header class="a4-brand">
+                            <div class="a4-brand-row">
+                                <div class="a4-logo">赛</div>
+                                <div>
+                                    <div class="a4-brand-name">赛杜甄选</div>
+                                    <div class="a4-brand-sub">SYDRRO SELECT · 校园热食</div>
+                                </div>
+                            </div>
+                            <div class="a4-chip-grid">
+                                <div class="a4-chip">
+                                    <div class="a4-chip-label">取餐号</div>
+                                    <div class="a4-chip-value">${escapeHtml(data.order.pickupNo)}</div>
+                                </div>
+                                <div class="a4-chip">
+                                    <div class="a4-chip-label">餐次</div>
+                                    <div class="a4-chip-value">${escapeHtml(data.order.mealType)}</div>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="a4-body">
+                            <section class="a4-section">
+                                <div class="a4-section-title"><span>配送信息</span><span>${escapeHtml(data.order.status)}</span></div>
+                                <div class="a4-info-grid">
+                                    <div class="a4-label">姓名</div><div class="a4-value">${escapeHtml(data.customer.name)}</div>
+                                    <div class="a4-label">电话</div><div class="a4-value">${escapeHtml(data.customer.phone)}</div>
+                                    <div class="a4-label">地址</div><div class="a4-value">${escapeHtml(data.customer.address)}</div>
+                                    <div class="a4-label">送达日</div><div class="a4-value">${escapeHtml(data.order.deliveryDate)}</div>
+                                </div>
+                                ${remarkHtml}
+                            </section>
+                            <section class="a4-section">
+                                <div class="a4-section-title"><span>商品明细</span><span>${data.items.length} 款</span></div>
+                                <div class="a4-item-list">${itemsHtml || '<div class="a4-item-name">未读取到商品</div>'}</div>
+                            </section>
+                            <div class="a4-total">
+                                <div class="a4-total-label">实付金额</div>
+                                <div class="a4-total-value">${money(data.totals.paid)}</div>
+                            </div>
+                            <div class="a4-ticket-foot">
+                                <div class="a4-op"><div class="a4-op-label">备餐</div><div class="a4-op-value">确认</div></div>
+                                <div class="a4-op"><div class="a4-op-label">配送</div><div class="a4-op-value">出发</div></div>
+                                <div class="a4-op"><div class="a4-op-label">完成</div><div class="a4-op-value">签收</div></div>
+                            </div>
+                            <div class="a4-item-meta" style="margin-top: 1.1mm; text-align: center;">${escapeHtml(String(data.order.orderNo || '').slice(-12))}</div>
+                        </div>
+                    </section>
+                `;
+            }).join('');
+            return ticketsHtml || '<div class="error">当前没有可打印订单。</div>';
+        }
+
+        const readQueue = () => {
+            try {
+                const raw = window.localStorage.getItem(PRINT_QUEUE_KEY);
+                const parsed = JSON.parse(raw || "[]");
+                return Array.isArray(parsed) ? parsed.filter(Boolean).map(String) : [];
+            } catch (error) {
+                return [];
+            }
+        };
+
+        const writeQueue = (queue) => {
+            if (!queue.length) {
+                window.localStorage.removeItem(PRINT_QUEUE_KEY);
+                return;
+            }
+            window.localStorage.setItem(PRINT_QUEUE_KEY, JSON.stringify(queue));
+        };
+
+        const popQueueAndGetNext = (currentOrderNo) => {
+            const queue = readQueue();
+            if (!queue.length) return null;
+
+            const current = String(currentOrderNo || "");
+            const headIndex = queue.indexOf(current);
+            if (headIndex >= 0) {
+                queue.splice(headIndex, 1);
+            } else {
+                queue.shift();
+            }
+            const next = queue[0] || null;
+            writeQueue(queue);
+            return next;
+        };
+
+        const readBatchOrderNos = (params) => {
+            const fromUrl = params.get('orders');
+            const raw = fromUrl ? fromUrl.split(',') : readQueue();
+            return Array.from(new Set(raw.map((item) => String(item || '').trim()).filter(Boolean)));
+        };
+
+        async function boot() {
+            const params = new URLSearchParams(window.location.search);
+            const orderNo = params.get('order_no');
+            const queueMode = params.get('queue') === '1';
+            const batchMode = params.get('batch') === '1' || params.get('layout') === 'a4';
+            const receipt = document.getElementById('receipt');
+            const hint = document.querySelector('.hint');
+
+            if (batchMode) {
+                document.body.classList.add('a4-mode');
+                setPrintPageMode('a4');
+                if (hint) hint.textContent = 'A4 紧凑排版：一页尽量塞更多配送小票';
+                receipt.className = 'a4-sheet';
+                const orderNos = readBatchOrderNos(params);
+                if (!orderNos.length) {
+                    receipt.innerHTML = '<div class="error">没有可批量打印的订单。</div>';
+                    return;
+                }
+
+                try {
+                    const orders = (await Promise.all(orderNos.map((item) => api.getOrderDetail(item)))).filter(canPrintOrder);
+                    if (!orders.length) {
+                        receipt.innerHTML = '<div class="error">没有可打印订单。仅支持已确认、处理中、已完成订单。</div>';
+                        window.localStorage.removeItem(PRINT_QUEUE_KEY);
+                        return;
+                    }
+                    receipt.innerHTML = renderA4Sheet(orders);
+                    document.title = `A4批量小票 ${orders.length}单`;
+                    window.addEventListener('afterprint', () => {
+                        window.localStorage.removeItem(PRINT_QUEUE_KEY);
+                    }, { once: true });
+                    if (params.get('autoprint') === '1') {
+                        setTimeout(() => window.print(), 500);
+                    }
+                } catch (error) {
+                    receipt.innerHTML = `<div class="error">${escapeHtml(error.message || '批量订单读取失败')}</div>`;
+                }
+                return;
+            }
+
+            setPrintPageMode('80mm');
+            if (!orderNo) {
+                receipt.innerHTML = '<div class="error">缺少订单号，无法打印。</div>';
+                return;
+            }
+
+            try {
+                const order = await api.getOrderDetail(orderNo);
+                if (!canPrintOrder(order)) {
+                    receipt.innerHTML = `<div class="error">当前订单状态为 ${escapeHtml(statusLabel(order.status))}，不可打印。仅支持已确认、处理中、已完成订单。</div>`;
+                    return;
+                }
+                receipt.innerHTML = renderReceipt(buildReceiptData(order));
+                document.title = `打印小票 ${orderNo}`;
+                if (queueMode) {
+                    window.addEventListener('afterprint', () => {
+                        const next = popQueueAndGetNext(orderNo);
+                        if (next) {
+                            window.location.href = `receipt-print.html?order_no=${encodeURIComponent(next)}&autoprint=1&queue=1`;
+                            return;
+                        }
+                        setTimeout(() => window.close(), 220);
+                    }, { once: true });
+                }
+                if (params.get('autoprint') === '1') {
+                    setTimeout(() => window.print(), 350);
+                }
+            } catch (error) {
+                receipt.innerHTML = `<div class="error">${escapeHtml(error.message || '订单读取失败')}</div>`;
+            }
+        }
+
+        checkAuth().then((ok) => {
+            if (ok) {
+                boot();
+            }
+        });
+    </script>
+</body>
+</html>

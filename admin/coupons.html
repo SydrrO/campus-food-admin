@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>优惠券发放 - 赛杜甄选-后台 v3.6</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
+  <link rel="stylesheet" href="css/workbench.css?v=20260508-0360">
+</head>
+<body>
+  <div id="app" class="admin-shell">
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-copy">
+          <div class="top-brand">
+            <div class="top-brand-title"><span class="brand-name">赛杜甄选-后台</span><span class="brand-version">v3.6</span></div>
+            <div class="top-brand-subtitle">商家后台</div>
+          </div>
+          <div>
+            <h1 class="page-title">优惠券发放</h1>
+          </div>
+        </div>
+        <div class="top-actions">
+          <span class="pill">当前用户：{{ selectedUser ? `#${selectedUser.id}` : '-' }}</span>
+          <span class="pill">刷新：{{ lastUpdatedAt || '-' }}</span>
+          <button class="button secondary" type="button" :disabled="loading || !selectedUser" @click="loadUserCoupons">
+            {{ loading ? '加载中' : '刷新' }}
+          </button>
+          <div class="app-menu" @click.stop>
+            <button class="menu-trigger" type="button" :class="{ active: navMenuOpen }" aria-label="打开页面菜单" :aria-expanded="String(navMenuOpen)" @click="toggleNavMenu">
+              <span class="menu-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            </button>
+            <div class="app-menu-popover" v-if="navMenuOpen">
+              <a class="app-menu-item" href="index.html#orders">
+                <span class="app-menu-item-title">订单</span>
+                <span class="app-menu-item-desc">处理订单和打单</span>
+              </a>
+              <a class="app-menu-item" href="index.html#users">
+                <span class="app-menu-item-title">用户</span>
+                <span class="app-menu-item-desc">查看用户和消费</span>
+              </a>
+              <a class="app-menu-item" href="index.html#menu">
+                <span class="app-menu-item-title">菜单</span>
+                <span class="app-menu-item-desc">维护分类与菜品</span>
+              </a>
+              <a class="app-menu-item" href="index.html#ledger">
+                <span class="app-menu-item-title">对账</span>
+                <span class="app-menu-item-desc">查看流水和利润</span>
+              </a>
+              <a class="app-menu-item active" href="coupons.html">
+                <span class="app-menu-item-title">优惠券</span>
+                <span class="app-menu-item-desc">发放和删除优惠券</span>
+              </a>
+              <div class="app-menu-meta">
+                <div>API：{{ API_BASE_URL }}</div>
+                <button class="button small secondary" type="button" @click="logoutAdmin">退出登录</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="menu-scrim" v-if="navMenuOpen" @click="closeNavMenu"></div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">全部</div>
+          <div class="stat-value">{{ couponStats.total }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">未揭晓</div>
+          <div class="stat-value">{{ couponStats.unrevealed }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">可使用</div>
+          <div class="stat-value">{{ couponStats.available }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">锁定/已用</div>
+          <div class="stat-value">{{ couponStats.reserved + couponStats.used }}</div>
+        </div>
+      </div>
+
+      <section class="panel">
+        <form class="toolbar coupon-toolbar" @submit.prevent="loadUserCoupons">
+          <label class="field">
+            <span class="field-label">用户 ID / 昵称</span>
+            <input class="input" v-model.trim="userIdInput" type="text" placeholder="例如 0001 / SydrrO">
+          </label>
+          <div class="row-actions">
+            <button class="button" type="submit" :disabled="loading">{{ loading ? '查询中' : '查询用户' }}</button>
+            <button class="button secondary" type="button" :disabled="loading" @click="resetPage">清空</button>
+          </div>
+          <div></div>
+        </form>
+
+        <div class="refund-error" v-if="errorMessage">{{ errorMessage }}</div>
+      </section>
+
+      <section class="coupon-layout" v-if="selectedUser">
+        <aside class="panel coupon-user-card">
+          <div class="panel-head">
+            <h2 class="panel-title">用户信息</h2>
+            <span class="tag" :class="selectedUser.is_member ? 'success' : ''">{{ selectedUser.is_member ? '会员' : '普通用户' }}</span>
+          </div>
+
+          <div class="user-summary">
+            <div class="user-avatar">
+              <img v-if="selectedUser.avatar_url" :src="selectedUser.avatar_url" alt="">
+              <span v-else>{{ avatarText(selectedUser) }}</span>
+            </div>
+            <div>
+              <div class="strong">{{ selectedUser.nickname || '未填写昵称' }}</div>
+              <div class="muted mono">#{{ selectedUser.id }}</div>
+            </div>
+          </div>
+
+          <div class="user-fields">
+            <div class="user-field"><span>用户编号</span><strong class="mono">{{ selectedUser.public_uid || '-' }}</strong></div>
+            <div class="user-field"><span>手机号</span><strong>{{ selectedUser.phone || '-' }}</strong></div>
+            <div class="user-field"><span>积分</span><strong>{{ selectedUser.points || 0 }}</strong></div>
+            <div class="user-field"><span>累计消费</span><strong>{{ money(selectedUser.total_spent) }}</strong></div>
+            <div class="user-field"><span>订单数</span><strong>{{ selectedUser.order_count || 0 }}</strong></div>
+            <div class="user-field"><span>优惠券数</span><strong>{{ selectedUser.coupon_count || 0 }}</strong></div>
+          </div>
+        </aside>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">发放优惠券</h2>
+          </div>
+
+          <form class="coupon-form" @submit.prevent="issueCoupons">
+            <div class="coupon-form-grid">
+              <label class="field">
+                <span class="field-label">券状态</span>
+                <select class="select" v-model="issueForm.status">
+                  <option value="available">可使用</option>
+                  <option value="unrevealed">未揭晓随机券</option>
+                </select>
+              </label>
+              <label class="field" v-show="issueForm.status === 'available'">
+                <span class="field-label">金额</span>
+                <input class="input" v-model.trim="issueForm.amount" type="number" min="0.01" step="0.01" placeholder="0.50">
+              </label>
+              <label class="field">
+                <span class="field-label">数量</span>
+                <input class="input" v-model.number="issueForm.count" type="number" min="1" max="50" step="1">
+              </label>
+              <label class="field">
+                <span class="field-label">标题</span>
+                <input class="input" v-model.trim="issueForm.title" type="text" maxlength="50" placeholder="留空自动生成">
+              </label>
+            </div>
+
+            <div class="row-actions">
+              <button class="button" type="submit" :disabled="issueLoading">{{ issueLoading ? '发放中' : '发放优惠券' }}</button>
+              <button class="button secondary" type="button" @click="usePreset('0.50')">0.5 元券</button>
+              <button class="button secondary" type="button" @click="usePreset('1.00')">1 元券</button>
+              <button class="button secondary" type="button" @click="usePreset('2.00')">2 元券</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" v-if="selectedUser">
+        <div class="panel-head">
+          <h2 class="panel-title">优惠券列表</h2>
+          <div class="row-actions">
+            <span class="tag">{{ visibleCoupons.length }} 张</span>
+            <button class="button small secondary" type="button" @click="openUsedCouponDialog">
+              查看已使用券 {{ usedCoupons.length }}
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap" v-if="visibleCoupons.length">
+          <table class="data-table coupon-table">
+            <thead>
+              <tr>
+                <th>券 ID</th>
+                <th>名称</th>
+                <th>状态</th>
+                <th>金额</th>
+                <th>锁定订单</th>
+                <th>创建时间</th>
+                <th>揭晓时间</th>
+                <th>使用时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="coupon in visibleCoupons" :key="coupon.id">
+                <td class="mono" data-label="券 ID">#{{ coupon.id }}</td>
+                <td data-label="名称">
+                  <div class="strong">{{ coupon.display_title || coupon.title }}</div>
+                  <div class="muted">{{ coupon.title }}</div>
+                </td>
+                <td data-label="状态">
+                  <span class="coupon-status tag" :class="statusClass(coupon.status)">{{ statusLabel(coupon.status) }}</span>
+                </td>
+                <td data-label="金额">{{ coupon.amount ? money(coupon.amount) : '-' }}</td>
+                <td class="mono" data-label="锁定订单">{{ coupon.locked_order_id ? `#${coupon.locked_order_id}` : '-' }}</td>
+                <td data-label="创建时间">{{ formatTime(coupon.created_at) }}</td>
+                <td data-label="揭晓时间">{{ formatTime(coupon.revealed_at) }}</td>
+                <td data-label="使用时间">{{ formatTime(coupon.used_at) }}</td>
+                <td data-label="操作">
+                  <button
+                    class="button small danger"
+                    type="button"
+                    :disabled="deletingCouponId === coupon.id || !canDeleteCoupon(coupon)"
+                    @click="deleteCoupon(coupon)"
+                  >
+                    {{ deletingCouponId === coupon.id ? '删除中' : '删除' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="empty">当前用户没有未使用优惠券。</div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" v-if="usedCouponDialogOpen" @click.self="closeUsedCouponDialog">
+      <div class="modal">
+        <div class="modal-head">
+          <h2 class="modal-title">已使用优惠券</h2>
+          <button class="button secondary" type="button" @click="closeUsedCouponDialog">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="table-wrap" v-if="usedCoupons.length">
+            <table class="data-table coupon-table">
+              <thead>
+                <tr>
+                  <th>券 ID</th>
+                  <th>名称</th>
+                  <th>金额</th>
+                  <th>锁定订单</th>
+                  <th>创建时间</th>
+                  <th>揭晓时间</th>
+                  <th>使用时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="coupon in usedCoupons" :key="`used-${coupon.id}`">
+                  <td class="mono" data-label="券 ID">#{{ coupon.id }}</td>
+                  <td data-label="名称">
+                    <div class="strong">{{ coupon.display_title || coupon.title }}</div>
+                    <div class="muted">{{ coupon.title }}</div>
+                  </td>
+                  <td data-label="金额">{{ coupon.amount ? money(coupon.amount) : '-' }}</td>
+                  <td class="mono" data-label="锁定订单">{{ coupon.locked_order_id ? `#${coupon.locked_order_id}` : '-' }}</td>
+                  <td data-label="创建时间">{{ formatTime(coupon.created_at) }}</td>
+                  <td data-label="揭晓时间">{{ formatTime(coupon.revealed_at) }}</td>
+                  <td data-label="使用时间">{{ formatTime(coupon.used_at) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="empty">当前用户没有已使用优惠券。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vant@3/lib/vant.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js?v=20260428-0205"></script>
+  <script src="js/api.js?v=20260430-2355"></script>
+  <script src="js/coupons.js?v=20260501-0330"></script>
+</body>
+</html>

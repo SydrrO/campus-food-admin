@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>赛杜甄选-后台 v3.6 [DEMO]</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@3/lib/index.css">
+  <link rel="stylesheet" href="css/workbench.css?v=20260508-0360">
+</head>
+<body>
+  <div id="app" class="admin-shell">
+    <aside class="sidebar desktop-sidebar">
+      <div class="sidebar-inner">
+        <div class="brand">
+          <div class="brand-title">赛杜甄选</div>
+          <div class="brand-subtitle">商家后台 v3.6</div>
+        </div>
+        <nav class="nav">
+          <button class="nav-button active" type="button" onclick="document.querySelector('#app').__vue_app__._instance.setupState.activeTab='orders'">
+            <span class="nav-title">订单</span>
+            <span class="nav-desc">处理订单和打单</span>
+          </button>
+          <button class="nav-button" type="button">
+            <span class="nav-title">用户</span>
+            <span class="nav-desc">查看用户和消费</span>
+          </button>
+          <button class="nav-button" type="button">
+            <span class="nav-title">菜单</span>
+            <span class="nav-desc">维护分类与菜品</span>
+          </button>
+          <button class="nav-button" type="button">
+            <span class="nav-title">对账</span>
+            <span class="nav-desc">查看流水和利润</span>
+          </button>
+          <a class="nav-button" href="coupons.html">
+            <span class="nav-title">优惠券</span>
+            <span class="nav-desc">发放和删除优惠券</span>
+          </a>
+        </nav>
+        <div class="sidebar-footer">
+          <div>环境：production</div>
+          <div>支付：real</div>
+          <button class="button small ghost" type="button">退出登录</button>
+        </div>
+      </div>
+    </aside>
+    <main class="main">
+      <!-- Mock Topbar -->
+      <header class="topbar">
+        <div class="topbar-copy">
+          <div class="top-brand">
+            <div class="top-brand-title"><span class="brand-name">赛杜甄选-后台</span><span class="brand-version">v3.6</span></div>
+            <div class="top-brand-subtitle">商家后台</div>
+          </div>
+          <div>
+            <div class="page-title-row">
+              <h1 class="page-title">订单处理</h1>
+              <button class="button secondary" type="button">配送详情</button>
+            </div>
+            <div class="page-note">订单按状态归类展示，列表直接显示"谁点了什么"。</div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <span class="pill">API：/api/v1</span>
+          <span class="pill">刷新：2026/5/8 10:30:00</span>
+          <button class="button secondary env-refresh" type="button">刷新环境</button>
+          <div class="app-menu">
+            <button class="menu-trigger" type="button">
+              <span class="menu-dots"><span></span><span></span><span></span></span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat"><div class="stat-label">当前结果</div><div class="stat-value">42</div></div>
+        <div class="stat"><div class="stat-label">已确认</div><div class="stat-value">18</div></div>
+        <div class="stat"><div class="stat-label">处理中</div><div class="stat-value">8</div></div>
+        <div class="stat"><div class="stat-label">已关闭</div><div class="stat-value">12</div></div>
+      </div>
+
+      <!-- Order Toolbar -->
+      <div class="panel">
+        <div class="toolbar order-toolbar">
+          <label class="field">
+            <span class="field-label">关键词</span>
+            <input class="input" type="text" placeholder="订单号 / 姓名 / 手机 / 地址">
+          </label>
+          <label class="field">
+            <span class="field-label">配送日期</span>
+            <input class="input" type="date" value="2026-05-08">
+          </label>
+          <label class="field">
+            <span class="field-label">餐别</span>
+            <select class="select"><option>午餐</option><option>晚餐</option></select>
+          </label>
+          <label class="field">
+            <span class="field-label">状态</span>
+            <select class="select"><option>已确认</option><option>全部</option></select>
+          </label>
+          <div class="toolbar-actions order-actions">
+            <button class="button" type="button">查询</button>
+            <button class="button secondary" type="button">重置</button>
+            <button class="button secondary" type="button">复制回执</button>
+            <button class="button secondary" type="button">打单</button>
+          </div>
+        </div>
+        <div class="panel-note">最近更新：2026/5/8 10:30:00</div>
+      </div>
+
+      <!-- Order Groups -->
+      <div class="order-groups">
+        <!-- Confirmed group -->
+        <article class="order-group">
+          <div class="group-head">
+            <div class="group-title">已确认</div>
+            <span class="tag primary">18 单</span>
+          </div>
+          <div class="order-list">
+            <!-- Order Card 1 -->
+            <article class="order-card">
+              <div class="order-card-top">
+                <div class="order-customer">
+                  <div class="order-customer-name">张三</div>
+                  <div class="order-phone">138****6789</div>
+                </div>
+                <div class="order-status-stack">
+                  <span class="tag primary">已确认</span>
+                  <span class="order-meal-pill">午餐</span>
+                </div>
+              </div>
+              <div class="order-card-body">
+                <div class="order-info-block address">
+                  <span class="order-info-label">配送</span>
+                  <strong>男寝 3号楼 301室</strong>
+                  <span>2026-05-08</span>
+                </div>
+                <div class="order-info-block items">
+                  <div class="order-items-head">
+                    <span class="order-info-label">菜品</span>
+                    <strong>3 件</strong>
+                  </div>
+                  <div class="order-item-chips">
+                    <span class="order-item-chip"><span>炸鸡腿</span><strong>x1</strong></span>
+                    <span class="order-item-chip"><span>烧鸭饭</span><strong>x1</strong></span>
+                    <span class="order-item-chip"><span>招牌凉皮</span><strong>x1</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div class="order-card-meta">
+                <div class="order-price">¥29.90</div>
+                <div class="order-meta-line">
+                  <span class="mono">20260508...3821</span>
+                  <span>2026/5/8 09:15:00</span>
+                </div>
+                <div class="order-remark">备注：少辣</div>
+              </div>
+              <div class="row-actions order-card-actions">
+                <button class="button small secondary" type="button">详情</button>
+                <button class="button small success" type="button">处理中</button>
+                <button class="button small danger" type="button">手动退款</button>
+                <button class="button small secondary" type="button">打印</button>
+              </div>
+            </article>
+            <!-- Order Card 2 -->
+            <article class="order-card">
+              <div class="order-card-top">
+                <div class="order-customer">
+                  <div class="order-customer-name">李四</div>
+                  <div class="order-phone">139****1234</div>
+                </div>
+                <div class="order-status-stack">
+                  <span class="tag primary">已确认</span>
+                  <span class="order-meal-pill">午餐</span>
+                </div>
+              </div>
+              <div class="order-card-body">
+                <div class="order-info-block address">
+                  <span class="order-info-label">配送</span>
+                  <strong>女寝 5号楼 202室</strong>
+                  <span>2026-05-08</span>
+                </div>
+                <div class="order-info-block items">
+                  <div class="order-items-head">
+                    <span class="order-info-label">菜品</span>
+                    <strong>2 件</strong>
+                  </div>
+                  <div class="order-item-chips">
+                    <span class="order-item-chip"><span>黑金卤肉饭</span><strong>x1</strong></span>
+                    <span class="order-item-chip"><span>意大利面</span><strong>x1</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div class="order-card-meta">
+                <div class="order-price">¥33.80</div>
+                <div class="order-meta-line">
+                  <span class="mono">20260508...4917</span>
+                  <span>2026/5/8 09:42:00</span>
+                </div>
+                <div class="order-remark empty" style="display:none">备注：无</div>
+              </div>
+              <div class="row-actions order-card-actions">
+                <button class="button small secondary" type="button">详情</button>
+                <button class="button small success" type="button">处理中</button>
+                <button class="button small danger" type="button">手动退款</button>
+                <button class="button small secondary" type="button">打印</button>
+              </div>
+            </article>
+            <!-- Order Card 3 -->
+            <article class="order-card">
+              <div class="order-card-top">
+                <div class="order-customer">
+                  <div class="order-customer-name">王五</div>
+                  <div class="order-phone">136****5678</div>
+                </div>
+                <div class="order-status-stack">
+                  <span class="tag primary">已确认</span>
+                  <span class="order-meal-pill">晚餐</span>
+                </div>
+              </div>
+              <div class="order-card-body">
+                <div class="order-info-block address">
+                  <span class="order-info-label">配送</span>
+                  <strong>书4 101教室</strong>
+                  <span>2026-05-08</span>
+                </div>
+                <div class="order-info-block items">
+                  <div class="order-items-head">
+                    <span class="order-info-label">菜品</span>
+                    <strong>1 件</strong>
+                  </div>
+                  <div class="order-item-chips">
+                    <span class="order-item-chip"><span>猪肘饭</span><strong>x1</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div class="order-card-meta">
+                <div class="order-price">¥18.00</div>
+                <div class="order-meta-line">
+                  <span class="mono">20260508...6012</span>
+                  <span>2026/5/8 08:30:00</span>
+                </div>
+                <div class="order-remark">备注：多加酱</div>
+              </div>
+              <div class="row-actions order-card-actions">
+                <button class="button small secondary" type="button">详情</button>
+                <button class="button small success" type="button">处理中</button>
+                <button class="button small danger" type="button">手动退款</button>
+                <button class="button small secondary" type="button">打印</button>
+              </div>
+            </article>
+          </div>
+        </article>
+        <!-- Delivering group -->
+        <article class="order-group">
+          <div class="group-head">
+            <div class="group-title">处理中</div>
+            <span class="tag success">8 单</span>
+          </div>
+          <div class="order-list">
+            <article class="order-card">
+              <div class="order-card-top">
+                <div class="order-customer">
+                  <div class="order-customer-name">赵六</div>
+                  <div class="order-phone">137****9012</div>
+                </div>
+                <div class="order-status-stack">
+                  <span class="tag success">处理中</span>
+                  <span class="order-meal-pill">午餐</span>
+                </div>
+              </div>
+              <div class="order-card-body">
+                <div class="order-info-block address">
+                  <span class="order-info-label">配送</span>
+                  <strong>男9 2号楼 405室</strong>
+                  <span>2026-05-08</span>
+                </div>
+                <div class="order-info-block items">
+                  <div class="order-items-head">
+                    <span class="order-info-label">菜品</span>
+                    <strong>4 件</strong>
+                  </div>
+                  <div class="order-item-chips">
+                    <span class="order-item-chip"><span>蜜汁鸡腿</span><strong>x2</strong></span>
+                    <span class="order-item-chip"><span>叉烧饭</span><strong>x1</strong></span>
+                    <span class="order-item-chip"><span>麻酱凉皮</span><strong>x1</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div class="order-card-meta">
+                <div class="order-price">¥45.80</div>
+                <div class="order-meta-line">
+                  <span class="mono">20260508...7823</span>
+                  <span>2026/5/8 09:00:00</span>
+                </div>
+              </div>
+              <div class="row-actions order-card-actions">
+                <button class="button small secondary" type="button">详情</button>
+                <button class="button small success" type="button">完成</button>
+                <button class="button small secondary" type="button">打印</button>
+              </div>
+            </article>
+          </div>
+        </article>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
